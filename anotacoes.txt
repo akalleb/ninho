@@ -1,0 +1,57 @@
+1. Abrir um terminal (PowerShell) e ir até a pasta do backend:
+   
+   ```
+   cd f:\python\ninho\backend
+   ```
+2. Criar (opcional, mas recomendado) e ativar um ambiente virtual:
+   
+   ```
+   python -m venv .venv
+   .\.venv\Scripts\activate
+   ```
+3. Instalar as dependências do backend:
+   
+   ```
+   pip install -r requirements.txt
+   ```
+4. Configurar variáveis de ambiente (Supabase, etc.):
+   
+   - Já existe um arquivo backend/.env .
+   - Abra esse arquivo e confira/ajuste as variáveis ( DATABASE_URL ou similar) com os dados do seu Supabase.
+5. Subir o servidor FastAPI com Uvicorn:
+   
+   No mesmo terminal (a partir da pasta backend ):
+   
+   ```
+   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+   ```
+6. Testar se está no ar:
+   
+   - Navegue para: http://localhost:8000
+   - Documentação interativa: http://localhost:8000/docs
+O frontend que criamos para colaboradores está preparado para chamar esse backend (porta 8000).
+
+2. Rodar o frontend (Next.js)
+
+Pré‑requisitos:
+
+- Node.js 18+ (compatível com Next 14)
+- npm (vem junto com o Node)
+Passos:
+
+1. Em outro terminal (ou nova aba), ir para a pasta do frontend:
+   
+   ```
+   cd f:\python\ninho\frontend
+   ```
+2. Instalar as dependências do frontend (primeira vez):
+   
+   ```
+   npm install
+   ```
+3. Subir o servidor de desenvolvimento do Next.js:
+   
+   ```
+   npm run dev
+   ```
+   Por padrão, o Next usa a porta 3000.

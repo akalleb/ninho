@@ -1,0 +1,232 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import "../../../../config/chart"; // Import Chart.js registration
+import { Spin } from 'antd';
+import FeatherIcon from 'feather-icons-react';
+import { useDispatch, useSelector } from 'react-redux';
+import { CardBarChart } from '../../style';
+import { Cards } from '../../../../components/cards/frame/cards-frame';
+import Heading from '../../../../components/heading/heading';
+import { ChartjsBarChartTransparent } from '../../../../components/charts/chartjs';
+import { getCustomTooltipConfig } from '../../../../components/utilities/utilities';
+
+import { cashFlowGetData, cashFlowFilterData } from '../../../../redux/chartContent/actionCreator';
+
+function CashFlow() {
+  const dispatch = useDispatch();
+  const { cashFlowState, cfIsLoading } = useSelector(state => {
+    return {
+      cashFlowState: state.chartContent.cashFlowData,
+      cfIsLoading: state.chartContent.cfLoading,
+    };
+  });
+  const [state, setState] = useState({
+    cashFlowActive: 'year',
+  });
+
+  useEffect(() => {
+    if (cashFlowGetData) {
+      dispatch(cashFlowGetData());
+    }
+  }, [dispatch]);
+
+  const moreContent = (
+    <>
+      <a href="#">
+        <FeatherIcon size={16} icon="printer" />
+        <span>Printer</span>
+      </a>
+      <a href="#">
+        <FeatherIcon size={16} icon="book-open" />
+        <span>PDF</span>
+      </a>
+      <a href="#">
+        <FeatherIcon size={16} icon="file-text" />
+        <span>Google Sheets</span>
+      </a>
+      <a href="#">
+        <FeatherIcon size={16} icon="x" />
+        <span>Excel (XLSX)</span>
+      </a>
+      <a href="#">
+        <FeatherIcon size={16} icon="file" />
+        <span>CSV</span>
+      </a>
+    </>
+  );
+
+  const handleActiveChangeCash = value => {
+    setState({
+      ...state,
+      cashFlowActive: value,
+    });
+    dispatch(cashFlowFilterData(value));
+  };
+
+  const cashFlowDataset = cashFlowState !== null && [
+    {
+      data: cashFlowState.dataIn,
+      backgroundColor: '#20C99770',
+      hoverBackgroundColor: '#20C997',
+      label: 'Cash in',
+      maxBarThickness: 10,
+      barThickness: 12,
+    },
+    {
+      data: cashFlowState.dataOut,
+      backgroundColor: '#FF4D4F70',
+      hoverBackgroundColor: '#FF4D4F',
+      label: 'Cash out',
+      maxBarThickness: 10,
+      barThickness: 12,
+    },
+  ];
+
+  return (    
+      cashFlowState !== null && (
+        <Cards
+          isbutton={
+            <div className="card-nav">
+              <ul>
+                <li className={state.cashFlowActive === 'week' ? 'active' : 'regular'}>
+                  <span onClick={() => handleActiveChangeCash('week')} className="cursor-pointer">
+                    Week
+                  </span>
+                </li>
+                <li className={state.cashFlowActive === 'month' ? 'active' : 'regular'}>
+                  <span onClick={() => handleActiveChangeCash('month')} className="cursor-pointer">
+                    Month
+                  </span>
+                </li>
+                <li className={state.cashFlowActive === 'year' ? 'active' : 'regular'}>
+                  <span onClick={() => handleActiveChangeCash('year')} className="cursor-pointer">
+                    Year
+                  </span>
+                </li>
+              </ul>
+            </div>
+          }
+          title={
+            <div>
+              Cash Flow <span>Nov 23, 2019 - Nov 29, 2019</span>
+            </div>
+          }
+          size="large"
+          more={moreContent}
+        >
+          {cfIsLoading ? (
+            <div className="sd-spin">
+              <Spin />
+            </div>
+          ) : (
+            <CardBarChart>
+              <div className="card-bar-top d-flex flex-grid">
+                <div className="flex-grid-child">
+                  <p>Current Balance</p>
+                  <Heading as="h3" className="color-primary">
+                    ${cashFlowState.current}
+                  </Heading>
+                </div>
+                <div className="flex-grid-child">
+                  <p>Cash In</p>
+                  <Heading as="h3">${cashFlowState.in}</Heading>
+                </div>
+                <div className="flex-grid-child">
+                  <p>Cash Out</p>
+                  <Heading as="h3">${cashFlowState.out}</Heading>
+                </div>
+              </div>
+              <ChartjsBarChartTransparent
+                labels={cashFlowState.labels}
+                datasets={cashFlowDataset}
+                height={106}
+                options={{
+                  maintainAspectRatio: true,
+                  responsive: true,
+                  layout: {
+                    padding: {
+                      top: 20,
+                    },
+                  },
+                  plugins: {
+                    legend: {
+                      display: false,
+                      position: 'bottom',
+                      align: 'start',
+                      labels: {
+                        boxWidth: 6,
+                        display: false,
+                        usePointStyle: true,
+                      },
+                    },
+                    tooltip: getCustomTooltipConfig(),
+                  },
+                  scales: {
+                    y: {
+                      border: {
+                        display: false,
+                      },
+                      grid: {
+                        color: '#e5e9f2',
+                        borderDash: [3, 3],
+                        lineWidth: 1,
+                      },
+                      ticks: {
+                        beginAtZero: true,
+                        font: {
+                          size: 12,
+                        },
+                        color: '#182b49',
+                        max: Math.max(...cashFlowState.dataIn),
+                        stepSize: Math.floor(Math.max(...cashFlowState.dataIn) / 5),
+                        callback(label) {
+                          return `${label}k`;
+                        },
+                      },
+                    },
+                    x: {
+                      border: {
+                        display: false,
+                      },
+                      grid: {
+                        display: true,
+                        lineWidth: 2,
+                        color: 'transparent',
+                      },
+                      ticks: {
+                        beginAtZero: true,
+                        font: {
+                          size: 12,
+                        },
+                        color: '#182b49',
+                      },
+                    },
+                  },
+                }}
+              />
+              <ul className="chart-dataIndicator">
+                {cashFlowDataset &&
+                  cashFlowDataset.map((item, key) => {
+                    return (
+                      <li key={key + 1} className="d-inline-flex align-items-center">
+                        <span
+                          className="w-10px h-10px d-flex border-radius-50"
+                          style={{
+                            backgroundColor: item.hoverBackgroundColor,
+                            margin: '0px 6.5px',
+                          }}
+                        />
+                        {item.label}
+                      </li>
+                    );
+                  })}
+              </ul>
+            </CardBarChart>
+          )}
+        </Cards>
+      )   
+  );
+}
+
+export default CashFlow;

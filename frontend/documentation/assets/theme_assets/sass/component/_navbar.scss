@@ -1,0 +1,53 @@
+// Navbar Css
+.navbar{
+    padding: 0 30px;
+    background-color: #fff;
+    box-shadow: 0 0 35px 0 rgba(154,161,171,.15);
+    margin: -5px -20px 0;
+    min-height: 70px;
+    .top-title{
+        width: 100%;
+        .title-text{
+            font-weight: 700;
+        }
+        .badge{
+            padding: 0 5.5px;
+            border-radius: .25rem;
+            line-height: 1.5;
+        }
+    }
+    .title-wrap{
+        .title-text{
+            @include md{
+                display: none;
+            }
+        }
+    }
+    .sidebar-trigger{
+        display: block;
+        cursor: pointer;
+        order: 2;
+        span{
+            width: 25px;
+            height: 2px;
+            display: block;
+            @extend .bg-text;
+            &:not(:last-child){
+                margin-bottom: 6px;
+            }
+            @include xs{
+                width: 22px;
+            }
+        }
+        &:hover{
+            span{
+                &:nth-child(2){
+                    width: 25px;
+                }
+            }
+        }
+    }
+    .topbar-right-menu{
+        display: none;
+    }
+}

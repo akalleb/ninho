@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Installation | StrikingDash Documentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200;0,300;0,400;0,600;0,700;0,800;0,900;1,200;1,300;1,400;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+    <!-- inject:css-->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f7fa;
+        }
+        
+        .main-wrapper {
+            display: flex;
+            gap: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .container {
+            flex: 1;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px 20px;
+            text-align: center;
+            margin-bottom: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 1400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .version-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+        
+        .sidebar {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 20px;
+            height: fit-content;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+            width: 280px;
+            flex-shrink: 0;
+        }
+        
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .sidebar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        .sidebar::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 10px;
+        }
+        
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: #5568d3;
+        }
+        
+        .sidebar h2 {
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 10;
+            padding-top: 0;
+        }
+        
+        .sidebar ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .sidebar > ul {
+            margin-top: 10px;
+        }
+        
+        .sidebar li {
+            margin-bottom: 8px;
+        }
+        
+        .sidebar li li {
+            margin-left: 15px;
+            margin-bottom: 5px;
+        }
+        
+        .sidebar a {
+            color: #555;
+            text-decoration: none;
+            display: block;
+            padding: 8px 12px;
+            border-radius: 5px;
+            transition: all 0.3s;
+            font-size: 0.95em;
+        }
+        
+        .sidebar a:hover {
+            background: #f0f0f0;
+            color: #667eea;
+            transform: translateX(5px);
+        }
+        
+        .sidebar a.active {
+            background: #667eea;
+            color: white;
+            font-weight: 500;
+        }
+        
+        .sidebar .sub-item {
+            font-size: 0.9em;
+            padding-left: 20px;
+        }
+        
+        .content {
+            background: white;
+            border-radius: 10px;
+            padding: 40px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .section {
+            margin-bottom: 50px;
+            scroll-margin-top: 20px;
+        }
+        
+        .section h2 {
+            font-size: 2em;
+            color: #667eea;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .section h3 {
+            font-size: 1.5em;
+            color: #555;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+        
+        .section h4 {
+            font-size: 1.2em;
+            color: #666;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        
+        .section p {
+            margin-bottom: 15px;
+            color: #555;
+        }
+        
+        .section ul, .section ol {
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+        
+        .section li {
+            margin-bottom: 10px;
+            color: #555;
+        }
+        
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+        
+        .code-inline {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #e83e8c;
+            font-size: 0.9em;
+        }
+        
+        .alert {
+            padding: 15px 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid;
+        }
+        
+        .alert-info {
+            background: #e7f3ff;
+            border-color: #2196F3;
+            color: #0c5460;
+        }
+        
+        .alert-warning {
+            background: #fff3cd;
+            border-color: #ffc107;
+            color: #856404;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+        
+        .alert-danger {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .feature-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .feature-card h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        .table th, .table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .table th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .table tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .toc {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+        
+        .toc ul {
+            list-style: none;
+            margin-left: 0;
+        }
+        
+        .toc li {
+            margin-bottom: 8px;
+        }
+        
+        .toc a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .toc a:hover {
+            text-decoration: underline;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+            margin-top: 60px;
+        }
+        
+        @media (max-width: 1024px) {
+            .main-wrapper {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                position: relative;
+                width: 100%;
+                max-height: none;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .sidebar {
+                padding: 20px;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="assets/vendor_assets/css/bootstrap/bootstrap.css">
+    <link rel="stylesheet" href="assets/vendor_assets/css/line-awesome.min.css">
+    <link rel="stylesheet" href="assets/vendor_assets/css/prism.css">
+    <link rel="stylesheet" href="style.css">
+    <!-- endinject -->
+    <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="img/favicon.ico">
+</head>
+
+<body>
+    <div class="atbd-page-wrap">
+        <div class="left-sidebar" id="left-sidebar">
+            <div class="left-sidebar-menu">
+                <a href="#" class="sidebar-close">
+                    <i class="la la-times"></i>
+                </a>
+                <a href="index.html" class="logo text-center">
+                    <span class="logo-lg"><img src="img/logo.png" alt="" id="sidebar-main-logo"> </span>
+                </a>
+                <ul class="mt-3 sidebar-nav list-unstyled" id="left-bar-menu">
+                    <li class="sidebar-nav__title sidebar-nav__item mt-2">Getting Started</li>
+                    <li class="sidebar-nav-item">
+                        <a href="index.html" class="sidebar-nav__link"><i class="las la-archive"></i> <span>Introduction</span></a>
+                    </li>
+                    <li class="sidebar-nav-item">
+                        <a href="pages-installation.html" class="sidebar-nav__link active"><i class="las la-sliders-h"></i> <span>Getting Started</span></a>
+                    </li>
+                    <li class="sidebar-nav-item">
+                        <a href="folder-structure.html" class="sidebar-nav__link"><i class="las la-folder-plus"></i> <span>Folder Structure</span></a>
+                    </li>
+                    <li class="sidebar-nav__title sidebar-nav__item mt-2">Customization</li>
+                    <li class="sidebar-nav-item">
+                        <a href="customizing-theme.html" class="sidebar-nav__link"><i class="lar la-edit"></i> <span>Customizing Theme</span></a>
+                    </li>
+                    <li class="sidebar-nav-item">
+                        <a href="add-components.html" class="sidebar-nav__link"><i class="lar la-edit"></i> <span>Add Components</span></a>
+                    </li>
+                     
+                    <li class="sidebar-nav-item">
+                        <a href="redux.html" class="sidebar-nav__link"><i class="lar la-edit"></i> <span>Redux</span></a>
+                    </li>
+                    <li class="sidebar-nav-item">
+                        <a href="maps.html" class="sidebar-nav__link"><i class="lar la-edit"></i> <span>Maps</span></a>
+                    </li>
+                    <li class="sidebar-nav-item">
+                        <a href="app.html" class="sidebar-nav__link"><i class="lar la-edit"></i> <span>Apps</span></a>
+                    </li>
+                     
+                    <li class="sidebar-nav__title sidebar-nav__item mt-2">Other</li>
+                    <li class="sidebar-nav-item">
+                        <a href="support.html" class="sidebar-nav__link"><i class="lar la-window-maximize"></i> <span>Support</span></a>
+                    </li>
+                    <li class="sidebar-nav-item">
+                        <a href="changelog.html" class="sidebar-nav__link"><i class="lar la-window-maximize"></i> <span>Changelog</span></a>
+                    </li>
+                    <li class="sidebar-nav-item">
+                        <a href="credits.html" class="sidebar-nav__link"><i class="lar la-window-maximize"></i> <span>Credits</span></a>
+                    </li>
+                </ul>
+            </div><!-- ends: .left-sidebar-menu -->
+        </div>
+        <div class="page-content">
+            <div class="content-inner">
+                <div class="navbar content-top">
+                    <div class="top-title d-flex justify-content-between align-items-center">
+                        <h4 class="title-wrap d-flex">
+                            <span class="sidebar-trigger d-lg-none">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </span>
+                            <span class="title-text">Documentation</span>
+                        </h4>
+                        <span class="badge badge-success bg-success">v1.0.0</span>
+                    </div>
+                </div>
+                <div class="main-content">
+                    <div class="container-fluid">
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="page-title-box d-flex justify-content-between align-items-center">
+                                    <h3 class="page-title">Get Started</h3>
+                                    <div class="page-title-right">
+                                        <ol class="breadcrumb m-0">
+                                            <li class="breadcrumb-item"><a href="index.html">StrikingDash </a></li>
+                                            <li class="breadcrumb-item active">Get Started</li>
+                                        </ol>
+                                    </div>
+                                </div><!-- ends: .page-title-box -->
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <p>Welcome to Next.js! Next.js helps you build modern applications for the web, mobile, or desktop.</p>
+
+                                            <p>For getting started an Next.js application you needs two things as Prerequisites.</p>
+
+                                            
+                                            <h4>Prerequisites</h4>
+                                            <p>Before you begin, ensure you have the following installed on your system:</p>
+                <ul>
+                    <li><strong>Node.js</strong> - Version 18.0 or higher</li>
+                    <li><strong>npm</strong> - Version 9.0 or higher (comes with Node.js)</li>
+                    <li><strong>Git</strong> - For version control (optional)</li>
+                </ul>
+
+                <div class="code-block"># Check your Node.js version
+node --version
+# Should be v18.0.0 or higher
+
+# Check your npm version
+npm --version
+# Should be 9.0.0 or higher</div>
+
+                <div class="alert alert-warning">
+                    <strong>Important:</strong> Make sure you're using the correct Node.js version. Some packages may not work with older versions.
+                </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-body">
+                                       
+                                        <h3>Installation</h3>
+                                        <h4>Step 1: Extract Files</h4>
+                <p>Extract the template files to your desired location. You can use any folder name you prefer.</p>
+
+                <h4>Step 2: Install Dependencies</h4>
+                <p>Open your terminal/command prompt, navigate to the template directory, and run:</p>
+                
+                <div class="code-block"># Navigate to the template directory
+cd strikingdash-nextjs
+
+# Install all dependencies
+npm install</div>
+
+                <p>This will install all required packages. The process may take a few minutes depending on your internet connection.</p>
+
+                <div class="alert alert-info">
+                    <strong>Tip:</strong> If you encounter any errors during installation, try deleting the <span class="code-inline">node_modules</span> folder and <span class="code-inline">package-lock.json</span> file, then run <span class="code-inline">npm install</span> again.
+                </div>
+
+                <h4>Step 3: Environment Configuration</h4>
+                <p>Create a <span class="code-inline">.env.local</span> file in the root directory:</p>
+                
+                <div class="code-block"># Copy the example file
+cp .env.example .env.local</div>
+
+                <p>Edit <span class="code-inline">.env.local</span> and configure your environment variables (optional):</p>
+                
+                <div class="code-block"># Base path (optional - remove for root domain deployment)
+NEXT_PUBLIC_BASE_PATH=/strikingdash-react
+
+# API endpoint (optional - update with your backend API URL)
+NEXT_PUBLIC_API_ENDPOINT=https://api.example.com</div>
+
+                <div class="alert alert-success">
+                    <strong>Note:</strong> The template uses client-side authentication that works seamlessly with or without a base path. No additional authentication configuration is required.
+                </div>
+                
+                <div class="alert alert-info">
+                    <strong>Tip:</strong> If you want to run the app without a base path (on root domain), simply remove or comment out the <span class="code-inline">NEXT_PUBLIC_BASE_PATH</span> line. Authentication will work correctly either way.
+                </div>
+
+                <h4>Step 4: Run Development Server</h4>
+                <p>Start the development server:</p>
+                
+                <div class="code-block">npm run dev</div>
+
+                <p>Open your browser and navigate to:</p>
+                <ul>
+                    <li>With base path: <span class="code-inline">http://localhost:3000/strikingdash-react</span></li>
+                    <li>Without base path: <span class="code-inline">http://localhost:3000</span></li>
+                </ul>
+
+                <div class="alert alert-success">
+                    <strong>Congratulations!</strong> Your template is now running. You should see the login page or dashboard depending on your configuration.
+                </div>
+                                    </div>
+                                </div><!-- ends: .card -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <footer class="footer">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-md-6">2025 © Backtheme - backtheme.com</div>
+                        <div class="col-md-6">
+                            <div class="text-md-right footer-links d-none d-md-block"><a href="https://sovware.com/" target="_blank">About</a> <a href="https://sovware.com/envato-support/?envato_item_id=28680325" target="_blank">Support</a></div>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+        </div><!-- ends: .page-content -->
+    </div>
+    <!-- inject:js-->
+    <script src="assets/vendor_assets/js/jquery/jquery-3.5.1.min.js"></script>
+    <script src="assets/vendor_assets/js/bootstrap/popper.js"></script>
+    <script src="assets/vendor_assets/js/bootstrap/bootstrap.min.js"></script>
+    <script src="assets/vendor_assets/js/prism.js"></script>
+    <script src="assets/theme_assets/js/main.js"></script>
+    <!-- endinject-->
+</body>
+
+</html>

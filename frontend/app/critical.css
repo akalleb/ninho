@@ -1,0 +1,15 @@
+/* Critical CSS to prevent Flash of Unstyled Content (FOUC) */
+/* This ensures HTML is hidden until styles are loaded */
+
+/* Prevent flash of unstyled content - hide HTML until styles load */
+html {
+  visibility: hidden;
+  opacity: 0;
+}
+
+html.loaded {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 0.1s;
+}
+

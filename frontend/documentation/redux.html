@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Redux | StrikingDash Documentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200;0,300;0,400;0,600;0,700;0,800;0,900;1,200;1,300;1,400;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+    <!-- inject:css-->
+    <link rel="stylesheet" href="assets/vendor_assets/css/bootstrap/bootstrap.css">
+    <link rel="stylesheet" href="assets/vendor_assets/css/line-awesome.min.css">
+    <link rel="stylesheet" href="assets/vendor_assets/css/prism.css">
+    <link rel="stylesheet" href="style.css">
+    <!-- endinject -->
+    <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="img/favicon.ico">
+</head>
+
+<body>
+    <div class="atbd-page-wrap">
+        <div class="left-sidebar" id="left-sidebar">
+            <div class="left-sidebar-menu">
+                <a href="#" class="sidebar-close">
+                    <i class="la la-times"></i>
+                </a>
+                <a href="index.html" class="logo text-center">
+                    <span class="logo-lg"><img src="img/logo.png" alt="" id="sidebar-main-logo"> </span>
+                </a>
+                <ul class="mt-3 sidebar-nav list-unstyled" id="left-bar-menu">
+                    <li class="sidebar-nav__title sidebar-nav__item mt-2">Getting Started</li>
+                    <li class="sidebar-nav-item">
+                        <a href="index.html" class="sidebar-nav__link"><i class="las la-archive"></i> <span>Introduction</span></a>
+                    </li>
+                    <li class="sidebar-nav-item">
+                        <a href="pages-installation.html" class="sidebar-nav__link"><i class="las la-sliders-h"></i> <span>Getting Started</span></a>
+                    </li>
+                    <li class="sidebar-nav-item">
+                        <a href="folder-structure.html" class="sidebar-nav__link"><i class="las la-folder-plus"></i> <span>Folder Structure</span></a>
+                    </li>
+                    <li class="sidebar-nav__title sidebar-nav__item mt-2">Customization</li>
+                    <li class="sidebar-nav-item">
+                        <a href="customizing-theme.html" class="sidebar-nav__link"><i class="lar la-edit"></i> <span>Customizing Theme</span></a>
+                    </li>
+                    <li class="sidebar-nav-item">
+                        <a href="add-components.html" class="sidebar-nav__link"><i class="lar la-edit"></i> <span>Add Components</span></a>
+                    </li>
+                     
+                    <li class="sidebar-nav-item">
+                        <a href="redux.html" class="sidebar-nav__link active"><i class="lar la-edit"></i> <span>Redux</span></a>
+                    </li>
+                    <li class="sidebar-nav-item">
+                        <a href="maps.html" class="sidebar-nav__link"><i class="lar la-edit"></i> <span>Maps</span></a>
+                    </li>
+                    <li class="sidebar-nav-item">
+                        <a href="app.html" class="sidebar-nav__link"><i class="lar la-edit"></i> <span>Apps</span></a>
+                    </li>
+                     
+                    <li class="sidebar-nav__title sidebar-nav__item mt-2">Other</li>
+                    <li class="sidebar-nav-item">
+                        <a href="support.html" class="sidebar-nav__link"><i class="lar la-window-maximize"></i> <span>Support</span></a>
+                    </li>
+                    <li class="sidebar-nav-item">
+                        <a href="changelog.html" class="sidebar-nav__link"><i class="lar la-window-maximize"></i> <span>Changelog</span></a>
+                    </li>
+                    <li class="sidebar-nav-item">
+                        <a href="credits.html" class="sidebar-nav__link"><i class="lar la-window-maximize"></i> <span>Credits</span></a>
+                    </li>
+                </ul>
+            </div><!-- ends: .left-sidebar-menu -->
+        </div>
+        <div class="page-content">
+            <div class="content-inner">
+                <div class="navbar content-top">
+                    <div class="top-title d-flex justify-content-between align-items-center">
+                        <h4 class="title-wrap d-flex">
+                            <span class="sidebar-trigger d-lg-none">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </span>
+                            <span class="title-text">Documentation</span>
+                        </h4>
+                        <span class="badge badge-success bg-success">v3.5.0</span>
+                    </div>
+                </div>
+                <div class="main-content">
+                    <div class="container-fluid">
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="page-title-box d-flex justify-content-between align-items-center">
+                                    <h3 class="page-title">Redux</h3>
+                                    <div class="page-title-right">
+                                        <ol class="breadcrumb m-0">
+                                            <li class="breadcrumb-item"><a href="index.html">StrikingDash </a></li>
+                                            <li class="breadcrumb-item active">Redux</li>
+                                        </ol>
+                                    </div>
+                                </div><!-- ends: .page-title-box -->
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h4>Redux</h4>
+                                        <p>Redux has been used as state management solution with redux-thunk for side-effects. <br> Every feature is organized in a folder containing three fundamental atomic part of redux flow as three separate file: actions, reducer, actionCreators for better structure. <br> For asynchronous state operations, well opinionated three actions model has been used. And the actions consist of [state]\_BEGIN,[state]\_SUCCESS,[state]\_FAILED.</p>
+                                        <p>Locate the redux folder in <strong class="text-danger">src/redux</strong></p>
+                                        <strong>Action</strong>
+                                        <p><strong>action.js</strong> file contains of all action types and payload required for any apps. Below is an example of <strong class="text-danger">authentication</strong>.</p>
+                                        <div class="pre-card-body mb-3">
+                                            <div class="show-source">
+                                                <div class="code-box-copy">
+                                                    <pre class=" language-js  language-markup"><code class=" language-js" id="Components">
+const actions = {
+  LOGIN_BEGIN: 'LOGIN_BEGIN',
+  LOGIN_SUCCESS: 'LOGIN_SUCCESS',
+  LOGIN_ERR: 'LOGIN_ERR',
+
+  loginBegin: () => {
+    return {
+      type: actions.LOGIN_BEGIN,
+    };
+  },
+
+  loginSuccess: data => {
+    return {
+      type: actions.LOGIN_SUCCESS,
+      data,
+    };
+  },
+
+  loginErr: err => {
+    return {
+      type: actions.LOGIN_ERR,
+      err,
+    };
+  },
+};
+
+export default actions;
+                                                    </code></pre>
+                                                </div>
+                                            </div>
+                                        </div><!-- ends: .pre-card-body -->
+
+                                        <strong class="d-block mt-5">ActionCreator</strong>
+                                        <p>Create all the actions declared in <strong>action.js</strong> file and pass the data in <strong>actionCreator.js</strong> file</p>
+                                        <div class="pre-card-body mb-3">
+                                            <div class="show-source">
+                                                <div class="code-box-copy">
+                                                    <pre class=" language-js  language-markup"><code class=" language-js" id="Components">
+import actions from './actions';
+
+const { loginBegin, loginSuccess, loginErr } = actions;
+
+const login = () => {
+  return async dispatch => {
+    try {
+      dispatch(loginBegin());
+      window.localStorage.setItem('logedIn', true);
+      return dispatch(loginSuccess(true));
+    } catch (err) {
+      dispatch(loginErr(err));
+    }
+  };
+};
+
+export { login };
+                                                    </code></pre>
+                                                </div>
+                                            </div>
+                                        </div><!-- ends: .pre-card-body -->
+
+                                        <strong class="d-block mt-5">Reducers</strong>
+                                        <p><strong>reducers.js</strong> file receives type and data from <strong>actionCreator.js</strong> file and return the data as state according to type.</p>
+                                        <div class="pre-card-body mb-3">
+                                            <div class="show-source">
+                                                <div class="code-box-copy">
+                                                    <pre class=" language-js  language-markup"><code class=" language-js" id="Components">
+import actions from './actions';
+
+const { LOGIN_BEGIN, LOGIN_SUCCESS, LOGIN_ERR } = actions;
+
+const initState = {
+  login: window.localStorage.getItem('logedIn'),
+  loading: false,
+  error: null,
+};
+
+const AuthReducer = (state = initState, action) => {
+  const { type, data, err } = action;
+  switch (type) {
+    case LOGIN_BEGIN:
+      return {
+        ...state,
+        loading: true,
+      };
+    case LOGIN_SUCCESS:
+      return {
+        ...state,
+        login: data,
+        loading: false,
+      };
+    case LOGIN_ERR:
+      return {
+        ...state,
+        error: err,
+        loading: false,
+      };
+    default:
+      return state;
+  }
+};
+export default AuthReducer;
+                                                    </code></pre>
+                                                </div>
+                                            </div>
+                                        </div><!-- ends: .pre-card-body -->
+
+                                        <strong class="d-block mt-5">rootReducers.js</strong>
+                                        <p>Finally locate the rootReducers.js file from <strong class="text-danger">src/redux/rootReducers.js</strong>. Import the reducer here from <strong class="text-danger">reducers.js</strong> file and pass it as state.</p>
+                                        <div class="pre-card-body mb-3">
+                                            <div class="show-source">
+                                                <div class="code-box-copy">
+                                                    <pre class=" language-js  language-markup"><code class=" language-js" id="Components">
+import { combineReducers } from 'redux';
+import authReducer from './authentication/reducers';
+
+const rootReducers = combineReducers({
+  auth: authReducer,
+});
+
+export default rootReducers;
+                                                    </code></pre>
+                                                </div>
+                                            </div>
+                                        </div><!-- ends: .pre-card-body -->
+
+                                    </div>
+                                </div><!-- ends: .card -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <footer class="footer">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-md-6">2025 © Backtheme - backtheme.com</div>
+                        <div class="col-md-6">
+                            <div class="text-md-right footer-links d-none d-md-block"><a href="https://sovware.com/" target="_blank">About</a> <a href="https://sovware.com/envato-support/?envato_item_id=28680325" target="_blank">Support</a></div>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+        </div><!-- ends: .page-content -->
+    </div>
+    <!-- inject:js-->
+    <script src="assets/vendor_assets/js/jquery/jquery-3.5.1.min.js"></script>
+    <script src="assets/vendor_assets/js/bootstrap/popper.js"></script>
+    <script src="assets/vendor_assets/js/bootstrap/bootstrap.min.js"></script>
+    <script src="assets/vendor_assets/js/prism.js"></script>
+    <script src="assets/theme_assets/js/main.js"></script>
+    <!-- endinject-->
+</body>
+
+</html>

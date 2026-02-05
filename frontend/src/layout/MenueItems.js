@@ -1,0 +1,174 @@
+import React, { useMemo, useEffect, useState } from 'react';
+import { Menu } from 'antd';
+import { usePathname } from 'next/navigation';
+import FeatherIcon from 'feather-icons-react';
+import propTypes from 'prop-types';
+import { useSelector } from 'react-redux';
+import { getBasePath } from '../utility/getBasePath';
+import { NextNavLink } from '../components/utilities/NextLink';
+
+const { SubMenu } = Menu;
+
+function MenuItems({ darkMode, toggleCollapsed, topMenu, events }) {
+  const nextPathname = usePathname();
+  const basePath = getBasePath();
+  const authState = useSelector((state) => state.auth.login);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  const authUser =
+    isClient && typeof authState === 'object' && authState ? authState : null;
+  const userRole = authUser?.role || null;
+  const baseMenuPath = userRole === 'health' ? '/cuidados' : '/admin';
+  
+  const [windowWidth, setWindowWidth] = useState(
+    typeof window !== 'undefined' ? window.innerWidth : 1920
+  );
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Normalização do PathName
+  let pathName = '';
+  if (nextPathname) {
+    let nextPath = nextPathname;
+    if (typeof window !== 'undefined' && basePath && nextPathname.startsWith(basePath)) {
+      nextPath = nextPathname.replace(basePath, '');
+    }
+    pathName = nextPath || '';
+  }
+
+  // LÓGICA DE SELEÇÃO DINÂMICA
+  const getSelectedKey = () => {
+    if (pathName.includes('users/dataTable') || pathName.includes('users/add-user')) return ['users'];
+    if (pathName.includes('resource-sources')) return ['resource-sources'];
+    if (pathName.includes('wallets')) return ['wallets'];
+    if (pathName.includes('incomes')) return ['incomes'];
+    if (pathName.includes('queue')) return ['queue'];
+    if (pathName.includes('children')) return ['children'];
+    if (pathName.includes('families')) return ['families'];
+    if (pathName.includes('reports')) return ['reports'];
+    if (pathName === baseMenuPath || pathName === `${baseMenuPath}/`) return ['playground'];
+    return [];
+  };
+
+  // LÓGICA DE PASTA ABERTA (SUBMENU)
+  const initialOpenKey = useMemo(() => {
+    if (pathName.includes('users') || pathName.includes('reports')) {
+      return 'admin';
+    }
+    return 'dashboard';
+  }, [pathName]);
+
+  const [openKeys, setOpenKeys] = useState(!topMenu ? [initialOpenKey] : []);
+
+  // Sincroniza abertura de pastas quando a rota muda
+  useEffect(() => {
+    if (!topMenu) {
+      setOpenKeys([initialOpenKey]);
+    }
+  }, [pathName, initialOpenKey, topMenu]);
+
+  const onOpenChange = (keys) => {
+    setOpenKeys(keys.length ? [keys[keys.length - 1]] : []);
+  };
+
+  const onClick = (item) => {
+    if (item.keyPath.length === 1) setOpenKeys([]);
+  };
+
+  const selectedKeysValue = useMemo(() => {
+    if (topMenu) return [];
+    return getSelectedKey();
+  }, [pathName, topMenu]);
+
+  return (
+    <Menu
+      onOpenChange={onOpenChange}
+      onClick={onClick}
+      mode={!topMenu || windowWidth <= 991 ? 'inline' : 'horizontal'}
+      theme={darkMode ? 'dark' : 'light'}
+      selectedKeys={selectedKeysValue}
+      defaultOpenKeys={!topMenu ? [initialOpenKey] : []}
+      overflowedIndicator={<FeatherIcon icon="more-vertical" />}
+      openKeys={openKeys}
+    >
+      <Menu.Item key="playground" icon={!topMenu && <FeatherIcon icon="home" />}>
+        <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}`} activeClassName="">
+          Início
+        </NextNavLink>
+      </Menu.Item>
+
+      {/* Visível para Admin e Saúde */}
+      {(userRole === 'admin' || userRole === 'health') && (
+        <Menu.Item key="queue" icon={!topMenu && <FeatherIcon icon="list" />}>
+          <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/queue`} activeClassName="">
+            Fila de Espera
+          </NextNavLink>
+        </Menu.Item>
+      )}
+      
+      {/* Visível para Admin e Operacional */}
+      {(userRole === 'admin' || userRole === 'operational') && (
+        <>
+            <Menu.Item key="families" icon={!topMenu && <FeatherIcon icon="home" />}>
+            <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/families`} activeClassName="">
+                Cadastro de Famílias
+            </NextNavLink>
+            </Menu.Item>
+            <Menu.Item key="children" icon={!topMenu && <FeatherIcon icon="users" />}>
+            <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/children`} activeClassName="">
+                Crianças / Atendidos
+            </NextNavLink>
+            </Menu.Item>
+        </>
+      )}
+
+      {/* Visível apenas para Admin */}
+      {userRole === 'admin' && (
+        <SubMenu key="admin" icon={!topMenu && <FeatherIcon icon="settings" />} title="Administração">
+          <Menu.Item key="users">
+            <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/users/dataTable`} activeClassName="">
+              Colaboradores
+            </NextNavLink>
+          </Menu.Item>
+          <Menu.Item key="reports">
+            <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/reports`} activeClassName="">
+              Relatórios
+            </NextNavLink>
+          </Menu.Item>
+          <Menu.Item key="resource-sources">
+            <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/resource-sources`} activeClassName="">
+              Fontes de Recursos
+            </NextNavLink>
+          </Menu.Item>
+          <Menu.Item key="wallets">
+            <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/wallets`} activeClassName="">
+              Carteiras / Fundos
+            </NextNavLink>
+          </Menu.Item>
+          <Menu.Item key="incomes">
+            <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/incomes`} activeClassName="">
+              Entradas de Receita
+            </NextNavLink>
+          </Menu.Item>
+        </SubMenu>
+      )}
+    </Menu>
+  );
+}
+
+MenuItems.propTypes = {
+  darkMode: propTypes.bool,
+  topMenu: propTypes.bool,
+  toggleCollapsed: propTypes.func,
+  events: propTypes.object,
+};
+
+export default MenuItems;

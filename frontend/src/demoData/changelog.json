@@ -1,0 +1,36 @@
+[
+    {
+        "id": 1,
+        "date": "Dec 2024",
+        "version": "1.0.0",
+        "new": [
+            "Next.js 14 App Router - Complete migration from React Router to Next.js App Router",
+            "Client-Side Authentication - Redux-based authentication with localStorage persistence",
+            "Login API Endpoint - Standalone authentication API endpoint",
+            "HTML Documentation - Complete ThemeForest user documentation with sidebar navigation",
+            "Protected Route Component - Client-side route protection without server middleware",
+            "Modern Authentication Flow - Works seamlessly with or without basePath configuration"
+        ],
+        "fixed": [
+            "Removed NextAuth JWT session limitations that prevented authentication without basePath",
+            "Fixed authentication redirect issues when basePath is empty",
+            "Fixed middleware session validation problems at root level",
+            "Resolved client-side navigation issues after authentication",
+            "Fixed XSS vulnerabilities in utilities.js and Ordersummary.js (replaced innerHTML with safe DOM methods)"
+        ],
+        "updated": [
+            "Migrated from React Router to Next.js App Router",
+            "Replaced NextAuth JWT sessions with client-side authentication",
+            "Updated authentication to use Redux + localStorage for persistence",
+            "Simplified middleware to pass-through (no server-side session validation)",
+            "Enhanced ProtectedRoute component with localStorage hydration support",
+            "Updated authentication utilities to use Redux instead of NextAuth hooks",
+            "Improved security by sanitizing HTML content to prevent XSS attacks"
+        ],
+        "removed": [
+            "Removed NextAuth JWT/session middleware dependencies",
+            "Removed SessionProvider from app providers",
+            "Removed server-side session validation from middleware"
+        ]
+    }
+]

@@ -1,0 +1,18 @@
+// Page Content Css
+.page-content{
+    margin-left: 250px;
+    overflow: hidden;
+    padding: 5px 20px 65px;
+    min-height: 80vh;
+    @include md{
+        margin-left: 0;
+    }
+}
+
+// Page Title
+.page-title-box{
+    padding: 30px 0;
+    @include sm{
+        flex-flow: column;
+    }
+}
