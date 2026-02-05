@@ -1,0 +1,271 @@
+'use client';
+import React, { useState, useEffect } from 'react';
+import { Row, Col, Card, Table, Button, Modal, Form, Select, DatePicker, message, Tag, Input, Popconfirm, Tooltip } from 'antd';
+import FeatherIcon from 'feather-icons-react';
+import { PageHeader } from '../../../src/components/page-headers/page-headers';
+import { Main } from '../../../src/container/styled';
+import api from '../../../src/config/api/axios';
+import withAdminLayoutNext from '../../../src/layout/withAdminLayoutNext';
+import dayjs from 'dayjs';
+
+const { Option } = Select;
+
+function QueuePage() {
+    // State
+    const [queue, setQueue] = useState([]);
+    const [children, setChildren] = useState([]);
+    const [professionals, setProfessionals] = useState([]);
+    const [wallets, setWallets] = useState([]);
+    
+    // Modal State
+    const [isModalVisible, setIsModalVisible] = useState(false);
+    const [editingItem, setEditingItem] = useState(null);
+    const [form] = Form.useForm();
+    const [loading, setLoading] = useState(false);
+
+    // Fetch Data
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const [qRes, cRes, pRes, wRes] = await Promise.all([
+                api.get('/queue/'),
+                api.get('/children/'),
+                api.get('/professionals/'),
+                api.get('/wallets/')
+            ]);
+            setQueue(qRes.data);
+            setChildren(cRes.data);
+            setProfessionals(pRes.data);
+            setWallets(wRes.data);
+        } catch (error) {
+            message.error('Erro ao carregar dados.');
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    // Handle Open Modal
+    const handleOpenModal = (item = null) => {
+        setEditingItem(item);
+        if (item) {
+            form.setFieldsValue({
+                child_id: item.child_id,
+                professional_id: item.professional_id,
+                wallet_id: item.wallet_id,
+                scheduled_time: item.scheduled_time ? dayjs(item.scheduled_time) : null,
+                notes: item.notes,
+                status: item.status
+            });
+        } else {
+            form.resetFields();
+        }
+        setIsModalVisible(true);
+    };
+
+    // Handle Submit
+    const handleOk = async () => {
+        try {
+            const values = await form.validateFields();
+            const payload = {
+                child_id: values.child_id,
+                professional_id: values.professional_id,
+                wallet_id: values.wallet_id,
+                scheduled_time: values.scheduled_time ? values.scheduled_time.toISOString() : null,
+                notes: values.notes,
+                status: values.status || 'agendado'
+            };
+            
+            if (editingItem) {
+                // Update
+                await api.put(`/attendances/${editingItem.id}`, payload);
+                message.success('Agendamento atualizado com sucesso!');
+            } else {
+                // Create
+                await api.post('/attendances/', payload);
+                message.success('Agendamento realizado com sucesso!');
+            }
+            
+            setIsModalVisible(false);
+            setEditingItem(null);
+            form.resetFields();
+            fetchData(); // Refresh
+        } catch (error) {
+            console.error(error);
+            message.error('Erro ao salvar.');
+        }
+    };
+
+    // Handle Delete
+    const handleDelete = async (id) => {
+        try {
+            await api.delete(`/attendances/${id}`);
+            message.success('Agendamento removido.');
+            fetchData();
+        } catch (error) {
+            message.error('Erro ao remover.');
+        }
+    };
+
+    // Table Columns
+    const columns = [
+        {
+            title: 'Criança',
+            dataIndex: 'child',
+            key: 'child',
+            render: (child) => child?.name || 'N/A',
+        },
+        {
+            title: 'Profissional',
+            dataIndex: 'professional',
+            key: 'professional',
+            render: (prof) => prof?.name || 'A definir',
+        },
+        {
+            title: 'Status',
+            dataIndex: 'status',
+            key: 'status',
+            render: (status) => {
+                let color = 'default';
+                let text = status;
+                if (status === 'agendado') { color = 'blue'; text = 'Agendado'; }
+                if (status === 'em_espera') { color = 'orange'; text = 'Em Espera'; }
+                if (status === 'em_atendimento') { color = 'green'; text = 'Em Atendimento'; }
+                if (status === 'finalizado') { color = 'gray'; text = 'Finalizado'; }
+                return <Tag color={color}>{text}</Tag>;
+            }
+        },
+        {
+            title: 'Horário',
+            dataIndex: 'scheduled_time',
+            key: 'time',
+            render: (time, record) => {
+                if (time) return dayjs(time).format('DD/MM/YYYY HH:mm');
+                if (record.check_in_time) return `Check-in: ${dayjs(record.check_in_time).format('HH:mm')}`;
+                return '-';
+            }
+        },
+        {
+            title: 'Carteira',
+            dataIndex: 'wallet',
+            key: 'wallet',
+            render: (wallet) => wallet?.name || '-',
+        },
+        {
+            title: 'Ações',
+            key: 'actions',
+            render: (_, record) => (
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <Tooltip title="Editar">
+                        <Button 
+                            size="small" 
+                            type="default" 
+                            shape="circle" 
+                            icon={<FeatherIcon icon="edit-2" size={14} />} 
+                            onClick={() => handleOpenModal(record)}
+                        />
+                    </Tooltip>
+                    <Popconfirm
+                        title="Tem certeza que deseja excluir?"
+                        onConfirm={() => handleDelete(record.id)}
+                        okText="Sim"
+                        cancelText="Não"
+                    >
+                        <Tooltip title="Excluir">
+                            <Button 
+                                size="small" 
+                                type="danger" 
+                                shape="circle" 
+                                icon={<FeatherIcon icon="trash-2" size={14} />} 
+                            />
+                        </Tooltip>
+                    </Popconfirm>
+                </div>
+            )
+        }
+    ];
+
+    return (
+        <>
+            <PageHeader
+                ghost
+                title="Fila de Atendimento e Agenda"
+                buttons={[
+                    <Button key="1" type="primary" onClick={() => handleOpenModal(null)}>
+                        <FeatherIcon icon="plus" size={14} /> Novo Agendamento
+                    </Button>,
+                ]}
+            />
+            <Main>
+                <Row gutter={25}>
+                    <Col xs={24}>
+                        <Card border={false}>
+                            <Table 
+                                dataSource={queue} 
+                                columns={columns} 
+                                rowKey="id" 
+                                loading={loading}
+                            />
+                        </Card>
+                    </Col>
+                </Row>
+            </Main>
+
+            <Modal
+                title={editingItem ? "Editar Agendamento" : "Novo Agendamento"}
+                open={isModalVisible}
+                onOk={handleOk}
+                onCancel={() => setIsModalVisible(false)}
+            >
+                <Form form={form} layout="vertical">
+                    <Form.Item name="child_id" label="Criança" rules={[{ required: true, message: 'Selecione uma criança' }]}>
+                        <Select showSearch optionFilterProp="children" filterOption={(input, option) =>
+                            option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                        }>
+                            {children.map(c => (
+                                <Option key={c.id} value={c.id}>{c.name}</Option>
+                            ))}
+                        </Select>
+                    </Form.Item>
+                    <Form.Item name="professional_id" label="Profissional">
+                        <Select allowClear>
+                            {professionals.map(p => (
+                                <Option key={p.id} value={p.id}>{p.name} ({p.role})</Option>
+                            ))}
+                        </Select>
+                    </Form.Item>
+                    <Form.Item name="wallet_id" label="Carteira / Recurso">
+                        <Select allowClear>
+                            {wallets.map(w => (
+                                <Option key={w.id} value={w.id}>{w.name}</Option>
+                            ))}
+                        </Select>
+                    </Form.Item>
+                    <Form.Item name="scheduled_time" label="Data e Hora (Deixe vazio para fila de espera imediata)">
+                        <DatePicker showTime format="DD/MM/YYYY HH:mm" style={{ width: '100%' }} />
+                    </Form.Item>
+                    {editingItem && (
+                         <Form.Item name="status" label="Status">
+                            <Select>
+                                <Option value="agendado">Agendado</Option>
+                                <Option value="em_espera">Em Espera</Option>
+                                <Option value="em_atendimento">Em Atendimento</Option>
+                                <Option value="finalizado">Finalizado</Option>
+                                <Option value="falta">Falta</Option>
+                            </Select>
+                        </Form.Item>
+                    )}
+                    <Form.Item name="notes" label="Observações">
+                        <Input.TextArea />
+                    </Form.Item>
+                </Form>
+            </Modal>
+        </>
+    );
+}
+
+export default withAdminLayoutNext(QueuePage);

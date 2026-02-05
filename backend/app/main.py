@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, Query, UploadFile, File
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, text
 from typing import List, Optional
 from . import models, database
@@ -193,6 +193,7 @@ class ChildMedication(ChildMedicationBase):
 class EvolutionBase(BaseModel):
     child_id: int
     professional_id: int | None = None
+    attendance_id: int | None = None
     service_type: str
     evolution_report: str
     intermittences: str | None = None
@@ -267,29 +268,6 @@ class PasswordChangeRequest(BaseModel):
     old_password: str
     new_password: str
 
-# --- Attendance Schemas ---
-class AttendanceBase(BaseModel):
-    child_id: int
-    notes: str | None = None
-
-class AttendanceCreate(AttendanceBase):
-    pass
-
-class Attendance(AttendanceBase):
-    id: int
-    status: str
-    check_in_time: datetime
-    start_time: datetime | None = None
-    end_time: datetime | None = None
-    professional_id: int | None = None
-
-    class Config:
-        from_attributes = True
-
-class ProductionReport(BaseModel):
-    professional_name: str
-    total_attendances: int
-
 # --- Resource Source Schemas ---
 class ResourceSourceBase(BaseModel):
     name: str
@@ -345,6 +323,44 @@ class Wallet(WalletBase):
 
     class Config:
         from_attributes = True
+
+# --- Attendance Schemas (Moved down to access Wallet) ---
+class AttendanceBase(BaseModel):
+    child_id: int
+    professional_id: int | None = None
+    wallet_id: int | None = None
+    scheduled_time: datetime | None = None
+    notes: str | None = None
+
+class AttendanceCreate(AttendanceBase):
+    pass
+
+class Attendance(AttendanceBase):
+    id: int
+    status: str
+    check_in_time: datetime | None = None
+    start_time: datetime | None = None
+    end_time: datetime | None = None
+    
+    # Nested Relations
+    child: Optional[Child] = None
+    professional: Optional[Professional] = None
+    wallet: Optional[Wallet] = None
+    
+    class Config:
+        from_attributes = True
+
+class AttendanceUpdate(AttendanceBase):
+    status: str | None = None
+
+class AttendanceUpdateStatus(BaseModel):
+    status: str
+    notes: str | None = None
+
+class ProductionReport(BaseModel):
+    professional_name: str
+    total_attendances: int
+    total_hours: float
 
 class TransferCreate(BaseModel):
     source_wallet_id: int
@@ -623,6 +639,14 @@ def delete_medication(med_id: int, db: Session = Depends(get_db)):
 # --- Multidisciplinary Evolution Endpoints ---
 @app.post("/children/{child_id}/evolutions", response_model=Evolution)
 def add_evolution(child_id: int, evo: EvolutionCreate, db: Session = Depends(get_db)):
+    # Security Check: Attendance must be 'em_atendimento'
+    if evo.attendance_id:
+        attendance = db.query(models.Attendance).filter(models.Attendance.id == evo.attendance_id).first()
+        if not attendance:
+             raise HTTPException(status_code=404, detail="Attendance not found")
+        if attendance.status != "em_atendimento":
+             raise HTTPException(status_code=400, detail="Evolução só pode ser registrada em atendimentos 'Em Atendimento'")
+    
     db_evo = models.MultidisciplinaryEvolution(**evo.model_dump())
     db.add(db_evo)
     db.commit()
@@ -860,15 +884,96 @@ async def upload_professional_avatar(
 # --- Attendance Endpoints ---
 @app.post("/attendances/", response_model=Attendance)
 def create_attendance(attendance: AttendanceCreate, db: Session = Depends(get_db)):
-    db_attendance = models.Attendance(child_id=attendance.child_id, notes=attendance.notes)
+    status = "agendado" if attendance.scheduled_time else "em_espera"
+    check_in = func.now() if status == "em_espera" else None
+    
+    db_attendance = models.Attendance(
+        child_id=attendance.child_id, 
+        professional_id=attendance.professional_id,
+        wallet_id=attendance.wallet_id,
+        scheduled_time=attendance.scheduled_time,
+        check_in_time=check_in,
+        status=status,
+        notes=attendance.notes
+    )
     db.add(db_attendance)
     db.commit()
     db.refresh(db_attendance)
     return db_attendance
 
 @app.get("/queue/", response_model=List[Attendance])
-def read_queue(db: Session = Depends(get_db)):
-    return db.query(models.Attendance).filter(models.Attendance.status == "waiting").all()
+def read_queue(
+    professional_id: Optional[int] = None,
+    date_filter: Optional[date] = None,
+    status: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    query = db.query(models.Attendance).options(
+        joinedload(models.Attendance.child),
+        joinedload(models.Attendance.professional),
+        joinedload(models.Attendance.wallet)
+    )
+    
+    if status:
+        query = query.filter(models.Attendance.status == status)
+    else:
+        # Default queue view: Waiting or Scheduled for today
+        today = date.today()
+        query = query.filter(
+            (models.Attendance.status == "em_espera") | 
+            ((models.Attendance.status == "agendado") & (func.date(models.Attendance.scheduled_time) == today))
+        )
+        
+    if professional_id:
+        query = query.filter(models.Attendance.professional_id == professional_id)
+        
+    if date_filter:
+        query = query.filter(func.date(models.Attendance.scheduled_time) == date_filter)
+        
+    return query.order_by(models.Attendance.scheduled_time.asc(), models.Attendance.check_in_time.asc()).all()
+
+@app.get("/attendances/my-day", response_model=List[Attendance])
+def get_professional_daily_list(professional_id: int, db: Session = Depends(get_db)):
+    # Profissional visualiza lista de pacientes do dia (Agendados, Em Espera, Em Atendimento, Finalizados hoje)
+    today = date.today()
+    return db.query(models.Attendance).filter(
+        models.Attendance.professional_id == professional_id,
+        func.date(func.coalesce(models.Attendance.scheduled_time, models.Attendance.check_in_time)) == today
+    ).order_by(models.Attendance.scheduled_time.asc()).all()
+
+@app.put("/attendances/{attendance_id}/status", response_model=Attendance)
+def update_attendance_status(
+    attendance_id: int, 
+    status_update: AttendanceUpdateStatus, 
+    db: Session = Depends(get_db)
+):
+    attendance = db.query(models.Attendance).filter(models.Attendance.id == attendance_id).first()
+    if not attendance:
+        raise HTTPException(status_code=404, detail="Attendance not found")
+    
+    new_status = status_update.status
+    attendance.status = new_status
+    if status_update.notes:
+        attendance.notes = status_update.notes
+
+    # Logic for timestamps
+    if new_status == "em_espera" and not attendance.check_in_time:
+        attendance.check_in_time = func.now()
+    elif new_status == "em_atendimento":
+        attendance.start_time = func.now()
+    elif new_status == "finalizado":
+        attendance.end_time = func.now()
+        
+    db.commit()
+    db.refresh(attendance)
+    return attendance
+
+@app.get("/attendances/{attendance_id}", response_model=Attendance)
+def read_attendance(attendance_id: int, db: Session = Depends(get_db)):
+    attendance = db.query(models.Attendance).filter(models.Attendance.id == attendance_id).first()
+    if not attendance:
+        raise HTTPException(status_code=404, detail="Attendance not found")
+    return attendance
 
 @app.put("/attendances/{attendance_id}/start", response_model=Attendance)
 def start_attendance(attendance_id: int, professional_id: int, db: Session = Depends(get_db)):
@@ -876,7 +981,7 @@ def start_attendance(attendance_id: int, professional_id: int, db: Session = Dep
     if not attendance:
         raise HTTPException(status_code=404, detail="Attendance not found")
     
-    attendance.status = "in_progress"
+    attendance.status = "em_atendimento"
     attendance.professional_id = professional_id
     attendance.start_time = func.now()
     db.commit()
@@ -889,14 +994,94 @@ def finish_attendance(attendance_id: int, notes: str, db: Session = Depends(get_
     if not attendance:
         raise HTTPException(status_code=404, detail="Attendance not found")
     
-    attendance.status = "completed"
+    if attendance.status != "em_atendimento":
+        raise HTTPException(status_code=400, detail="Apenas atendimentos 'Em Atendimento' podem ser finalizados.")
+
+    attendance.status = "finalizado"
     attendance.end_time = func.now()
     attendance.notes = notes
     db.commit()
     db.refresh(attendance)
     return attendance
 
-# --- Reports Endpoints ---
+@app.put("/attendances/{attendance_id}", response_model=Attendance)
+def update_attendance(attendance_id: int, update: AttendanceUpdate, db: Session = Depends(get_db)):
+    attendance = db.query(models.Attendance).filter(models.Attendance.id == attendance_id).first()
+    if not attendance:
+        raise HTTPException(status_code=404, detail="Attendance not found")
+    
+    update_data = update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(attendance, key, value)
+        
+    db.commit()
+    db.refresh(attendance)
+    return attendance
+
+@app.delete("/attendances/{attendance_id}", status_code=204)
+def delete_attendance(attendance_id: int, db: Session = Depends(get_db)):
+    attendance = db.query(models.Attendance).filter(models.Attendance.id == attendance_id).first()
+    if not attendance:
+        raise HTTPException(status_code=404, detail="Attendance not found")
+    
+    db.delete(attendance)
+    db.commit()
+    return None
+
+# --- Dashboard & Reports Endpoints ---
+
+@app.get("/professional/{professional_id}/dashboard")
+def get_professional_dashboard(professional_id: int, db: Session = Depends(get_db)):
+    today = date.today()
+    start_of_month = date(today.year, today.month, 1)
+    start_of_year = date(today.year, 1, 1)
+    
+    # Base query for this professional's finished attendances
+    base_query = db.query(models.Attendance).filter(
+        models.Attendance.professional_id == professional_id,
+        models.Attendance.status == "finalizado"
+    )
+    
+    # Counts
+    count_today = base_query.filter(func.date(models.Attendance.end_time) == today).count()
+    count_month = base_query.filter(func.date(models.Attendance.end_time) >= start_of_month).count()
+    count_year = base_query.filter(func.date(models.Attendance.end_time) >= start_of_year).count()
+    
+    # Average Time (Simple approximation in minutes)
+    # SQLite/Postgres diff in date functions varies. 
+    # Python-side calculation for simplicity on last 100 records
+    last_attendances = base_query.order_by(models.Attendance.end_time.desc()).limit(100).all()
+    total_minutes = 0
+    valid_count = 0
+    for att in last_attendances:
+        if att.start_time and att.end_time:
+            delta = att.end_time - att.start_time
+            total_minutes += delta.total_seconds() / 60
+            valid_count += 1
+            
+    avg_time = int(total_minutes / valid_count) if valid_count > 0 else 0
+    
+    # Activity Timeline (Last 20)
+    timeline = []
+    for att in last_attendances[:20]:
+        timeline.append({
+            "id": att.id,
+            "child_name": att.child.name if att.child else "Desconhecido",
+            "date": att.end_time,
+            "duration": f"{int((att.end_time - att.start_time).total_seconds() / 60)} min" if (att.start_time and att.end_time) else "-",
+            "notes": att.notes
+        })
+
+    return {
+        "overview": {
+            "today": count_today,
+            "month": count_month,
+            "year": count_year,
+            "avg_time_minutes": avg_time
+        },
+        "timeline": timeline
+    }
+
 @app.get("/reports/production", response_model=List[ProductionReport])
 def get_production_report(
     start_date: Optional[date] = None, 

@@ -185,20 +185,38 @@ class MultidisciplinaryEvolution(Base):
     child = relationship("Child", back_populates="evolutions")
     professional = relationship("Professional")
 
+class AttendanceStatus(str, enum.Enum):
+    SCHEDULED = "agendado"
+    WAITING = "em_espera"
+    IN_PROGRESS = "em_atendimento"
+    FINISHED = "finalizado"
+    NO_SHOW = "falta"
+
 class Attendance(Base):
     __tablename__ = "attendances"
 
     id = Column(Integer, primary_key=True, index=True)
     child_id = Column(Integer, ForeignKey("children.id"))
     professional_id = Column(Integer, ForeignKey("professionals.id"), nullable=True) # Nullable if just in queue without assigned professional yet
-    status = Column(String, default="waiting") # waiting, in_progress, completed
-    check_in_time = Column(DateTime(timezone=True), server_default=func.now())
-    start_time = Column(DateTime(timezone=True), nullable=True)
-    end_time = Column(DateTime(timezone=True), nullable=True)
+    wallet_id = Column(Integer, ForeignKey("wallets.id"), nullable=True) # Recurso que paga o atendimento
+    
+    status = Column(String, default=AttendanceStatus.SCHEDULED) 
+    
+    check_in_time = Column(DateTime(timezone=True), nullable=True) # Chegada na recepção
+    scheduled_time = Column(DateTime(timezone=True), nullable=True) # Horário Agendado
+    start_time = Column(DateTime(timezone=True), nullable=True) # Início do atendimento
+    end_time = Column(DateTime(timezone=True), nullable=True) # Fim do atendimento
+    
     notes = Column(Text, nullable=True)
 
     child = relationship("Child", back_populates="attendances")
     professional = relationship("Professional", back_populates="attendances")
+    wallet = relationship("Wallet")
+    evolution = relationship("MultidisciplinaryEvolution", back_populates="attendance", uselist=False)
+
+# Update Evolution to link back to Attendance
+MultidisciplinaryEvolution.attendance_id = Column(Integer, ForeignKey("attendances.id"), nullable=True)
+MultidisciplinaryEvolution.attendance = relationship("Attendance", back_populates="evolution")
 
 class ResourceSource(Base):
     __tablename__ = "resource_sources"

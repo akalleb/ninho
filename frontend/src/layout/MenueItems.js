@@ -51,6 +51,8 @@ function MenuItems({ darkMode, toggleCollapsed, topMenu, events }) {
     if (pathName.includes('wallets')) return ['wallets'];
     if (pathName.includes('incomes')) return ['incomes'];
     if (pathName.includes('queue')) return ['queue'];
+    if (pathName.includes('my-patients')) return ['my-patients'];
+    if (pathName.includes('my-profile')) return ['my-profile'];
     if (pathName.includes('children')) return ['children'];
     if (pathName.includes('families')) return ['families'];
     if (pathName.includes('reports')) return ['reports'];
@@ -112,6 +114,22 @@ function MenuItems({ darkMode, toggleCollapsed, topMenu, events }) {
             Fila de Espera
           </NextNavLink>
         </Menu.Item>
+      )}
+
+      {/* Visível apenas para Saúde */}
+      {userRole === 'health' && (
+        <>
+            <Menu.Item key="my-patients" icon={!topMenu && <FeatherIcon icon="users" />}>
+                <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/my-patients`} activeClassName="">
+                Meus Pacientes
+                </NextNavLink>
+            </Menu.Item>
+            <Menu.Item key="my-profile" icon={!topMenu && <FeatherIcon icon="user" />}>
+                <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/my-profile`} activeClassName="">
+                Meu Perfil / Produção
+                </NextNavLink>
+            </Menu.Item>
+        </>
       )}
       
       {/* Visível para Admin e Operacional */}
