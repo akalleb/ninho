@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Form, Input, Select, DatePicker, Button, Card, App, Upload, InputNumber } from 'antd';
+import { Row, Col, Form, Input, Select, DatePicker, Button, App, Upload, InputNumber } from 'antd';
 import FeatherIcon from 'feather-icons-react';
-import { PageHeader } from '../../../components/page-headers/page-headers';
 import { Main } from '../../styled';
+import { Cards } from '../../../components/cards/frame/cards-frame';
 import api from '../../../config/api/axios';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dayjs from 'dayjs';
@@ -115,11 +115,22 @@ function AddResourceSource() {
 
   return (
     <>
-      <PageHeader ghost title={isEditMode ? "Editar Fonte de Recurso" : "Nova Fonte de Recurso"} />
       <Main>
         <Row gutter={25}>
           <Col xs={24}>
-            <Card title="Dados da Fonte de Recurso">
+            <Cards 
+                title={isEditMode ? "Editar Fonte de Recurso" : "Nova Fonte de Recurso"}
+                extra={
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <Button onClick={() => router.push('/admin/resource-sources')}>
+                        Cancelar
+                      </Button>
+                      <Button type="primary" onClick={() => form.submit()} loading={loading}>
+                        Salvar Fonte
+                      </Button>
+                    </div>
+                }
+            >
               <Form
                 form={form}
                 layout="vertical"
@@ -211,20 +222,9 @@ function AddResourceSource() {
                         </Upload>
                     </Form.Item>
                   </Col>
-
-                  <Col xs={24}>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '30px' }}>
-                      <Button onClick={() => router.push('/admin/resource-sources')}>
-                        Cancelar
-                      </Button>
-                      <Button type="primary" htmlType="submit" loading={loading} size="large">
-                        Salvar Fonte
-                      </Button>
-                    </div>
-                  </Col>
                 </Row>
               </Form>
-            </Card>
+            </Cards>
           </Col>
         </Row>
       </Main>

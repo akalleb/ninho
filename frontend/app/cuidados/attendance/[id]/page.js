@@ -1,8 +1,8 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Form, Input, Button, Descriptions, Divider, message, List, Tag, Timeline, Avatar, Upload, Modal, Select, Tooltip } from 'antd';
-import { PageHeader } from '../../../../src/components/page-headers/page-headers';
 import { Main } from '../../../../src/container/styled';
+import { Cards } from '../../../../src/components/cards/frame/cards-frame';
 import api from '../../../../src/config/api/axios';
 import withAdminLayoutNext from '../../../../src/layout/withAdminLayoutNext';
 import { useRouter } from 'next/navigation';
@@ -281,353 +281,355 @@ function AttendancePage({ params }) {
 
     return (
         <>
-            <PageHeader
-                ghost
-                title={`Atendimento: ${child?.name || '...'}`}
-                buttons={[
-                    <Button key="1" onClick={() => router.back()}>
-                        Voltar
-                    </Button>
-                ]}
-            />
             <Main>
-                <Row gutter={25}>
-                    <Col xs={24} md={8}>
-                        <Card title="Prontuário Clínico">
-                            <Descriptions column={1} layout="vertical">
-                                <Descriptions.Item label="Diagnóstico">
-                                    {child?.diagnosis || '-'}
-                                </Descriptions.Item>
-                                <Descriptions.Item label="Diagnóstico fechado">
-                                    {child?.is_diagnosis_closed ? 'Sim' : 'Em investigação'}
-                                </Descriptions.Item>
-                                <Descriptions.Item label="Tipo Sanguíneo">
-                                    {child?.blood_type || '-'}
-                                </Descriptions.Item>
-                                <Descriptions.Item label="Alergias">
-                                    {child?.allergies || '-'}
-                                </Descriptions.Item>
-                                <Descriptions.Item label="Histórico Gestacional">
-                                    {child?.gestational_history || '-'}
-                                </Descriptions.Item>
-                                <Descriptions.Item label="Peso atual">
-                                    {child?.weight != null ? `${child.weight} kg` : '-'}
-                                </Descriptions.Item>
-                                <Descriptions.Item label="Altura">
-                                    {child?.height != null ? `${child.height} cm` : '-'}
-                                </Descriptions.Item>
-                                <Descriptions.Item label="Perímetro Cefálico">
-                                    {child?.cephalic_perimeter != null
-                                        ? `${child.cephalic_perimeter} cm`
-                                        : '-'}
-                                </Descriptions.Item>
-                                <Descriptions.Item label="Contato de Emergência">
-                                    {child?.emergency_contact || '-'}
-                                </Descriptions.Item>
-                                <Descriptions.Item label="Necessidades específicas">
-                                    {assistanceNeedsText}
-                                </Descriptions.Item>
-                            </Descriptions>
-                        </Card>
-
-                        <Card
-                            title="Medicação Ativa"
-                            style={{ marginTop: 25 }}
-                            extra={
-                                child && (
-                                    <Button size="small" type="primary" onClick={openAddMedicationModal}>
-                                        Adicionar medicação
-                                    </Button>
-                                )
-                            }
-                        >
-                            <List
-                                itemLayout="horizontal"
-                                dataSource={medications}
-                                locale={{ emptyText: 'Nenhuma medicação registrada' }}
-                                renderItem={(item) => (
-                                    <List.Item
-                                        actions={[
-                                            <Button
-                                                key="edit"
-                                                size="small"
-                                                type="link"
-                                                onClick={() => openEditMedicationModal(item)}
-                                            >
-                                                Editar
-                                            </Button>
-                                        ]}
-                                    >
-                                        <List.Item.Meta
-                                            avatar={
-                                                <Avatar
-                                                    style={{ backgroundColor: '#87d068' }}
-                                                    children={item.med_name
-                                                        ?.substring(0, 1)
-                                                        .toUpperCase()}
-                                                />
-                                            }
-                                            title={item.med_name}
-                                            description={`${item.dosage || ''} ${
-                                                item.schedule ? `- ${item.schedule}` : ''
-                                            } ${item.frequency ? `(${item.frequency})` : ''}`}
-                                        />
-                                        <Tag>{item.status}</Tag>
-                                    </List.Item>
-                                )}
-                            />
-                        </Card>
-
-                        {child && (
-                            <Card title="Arquivos de Prontuário" style={{ marginTop: 25 }}>
-                                <Row gutter={16}>
-                                    <Col span={24}>
-                                        <p>
-                                            <strong>Laudo médico:</strong>{' '}
-                                            {child.report_url ? (
-                                                <a
-                                                    href={child.report_url}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                >
-                                                    Ver arquivo
-                                                </a>
-                                            ) : (
-                                                'Não anexado'
-                                            )}
-                                        </p>
-                                        <Upload {...getUploadProps('report')}>
-                                            <Button size="small">Enviar Laudo</Button>
-                                        </Upload>
-                                    </Col>
-                                    <Col span={24} style={{ marginTop: 16 }}>
-                                        <p>
-                                            <strong>Documento da criança (RG/CPF):</strong>{' '}
-                                            {child.child_id_url ? (
-                                                <a
-                                                    href={child.child_id_url}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                >
-                                                    Ver arquivo
-                                                </a>
-                                            ) : (
-                                                'Não anexado'
-                                            )}
-                                        </p>
-                                        <Upload {...getUploadProps('child_id')}>
-                                            <Button size="small">Enviar Documento</Button>
-                                        </Upload>
-                                    </Col>
-                                    <Col span={24} style={{ marginTop: 16 }}>
-                                        <p>
-                                            <strong>Cartão de vacinação:</strong>{' '}
-                                            {child.vaccination_card_url ? (
-                                                <a
-                                                    href={child.vaccination_card_url}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                >
-                                                    Ver arquivo
-                                                </a>
-                                            ) : (
-                                                'Não anexado'
-                                            )}
-                                        </p>
-                                        <Upload {...getUploadProps('vaccination')}>
-                                            <Button size="small">Enviar Cartão</Button>
-                                        </Upload>
-                                    </Col>
-                                    <Col span={24} style={{ marginTop: 16 }}>
-                                        <p>
-                                            <strong>Histórico escolar:</strong>{' '}
-                                            {child.school_history_url ? (
-                                                <a
-                                                    href={child.school_history_url}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                >
-                                                    Ver arquivo
-                                                </a>
-                                            ) : (
-                                                'Não anexado'
-                                            )}
-                                        </p>
-                                        <Upload {...getUploadProps('school')}>
-                                            <Button size="small">Enviar Histórico</Button>
-                                        </Upload>
-                                    </Col>
-                                </Row>
-                            </Card>
-                        )}
-                    </Col>
-                    <Col xs={24} md={16}>
-                        <Card title="Linha do Tempo Multidisciplinar">
-                            {evolutions.length === 0 ? (
-                                <p>Nenhuma evolução registrada ainda.</p>
-                            ) : (
-                                <Timeline mode="left">
-                                    {evolutions.map((evo) => {
-                                        const prof = evo.professional_id
-                                            ? professionalMap[evo.professional_id]
-                                            : null;
-                                        return (
-                                            <Timeline.Item
-                                                key={evo.id}
-                                                label={dayjs(evo.date_service).format(
-                                                    'DD/MM/YYYY HH:mm'
-                                                )}
-                                                color="blue"
-                                            >
-                                                <p>
-                                                    <strong>{evo.service_type}</strong>
-                                                </p>
-                                                {prof && (
-                                                    <p>
-                                                        <small>
-                                                            Profissional: {prof.name}
-                                                            {prof.registry_number
-                                                                ? ` (${prof.registry_number})`
-                                                                : ''}
-                                                        </small>
-                                                    </p>
-                                                )}
-                                                <p>{evo.evolution_report}</p>
-                                                {evo.protocol_scores && (
-                                                    <p>
-                                                        <small>
-                                                            Escalas / Avaliação:{' '}
-                                                            {evo.protocol_scores}
-                                                        </small>
-                                                    </p>
-                                                )}
-                                                {evo.intermittences && (
-                                                    <p style={{ color: 'red' }}>
-                                                        <small>
-                                                            Intercorrência: {evo.intermittences}
-                                                        </small>
-                                                    </p>
-                                                )}
-                                            </Timeline.Item>
-                                        );
-                                    })}
-                                </Timeline>
-                            )}
-                        </Card>
-
-                        <Card
-                            title="Registrar Evolução deste Atendimento"
-                            style={{ marginTop: 24 }}
-                        >
-                            <Form form={form} layout="vertical" onFinish={handleFinish}>
-                                <Form.Item
-                                    name="service_type"
-                                    label="Tipo de atendimento"
-                                    rules={[{ required: true, message: 'Obrigatório' }]}
-                                >
-                                    <Select placeholder="Selecione o tipo de atendimento">
-                                        <Option value="Fisioterapia">Fisioterapia</Option>
-                                        <Option value="Psicologia">Psicologia</Option>
-                                        <Option value="Fonoaudiologia">Fonoaudiologia</Option>
-                                        <Option value="Terapia Ocupacional">
-                                            Terapia Ocupacional
-                                        </Option>
-                                        <Option value="Pedagogia">Pedagogia</Option>
-                                        <Option value="Médico">Médico</Option>
-                                    </Select>
-                                </Form.Item>
-                                <Form.Item name="weight" label="Peso atual (kg)">
-                                    <Input type="number" />
-                                </Form.Item>
-                                <Form.Item name="height" label="Altura atual (cm)">
-                                    <Input type="number" />
-                                </Form.Item>
-                                <Form.Item
-                                    name="cephalic_perimeter"
-                                    label="Perímetro Cefálico (cm)"
-                                >
-                                    <Input type="number" />
-                                </Form.Item>
-                                <Form.Item
-                                    name="protocol_scores"
-                                    label={
-                                        <span>
-                                            Escalas / Avaliação do Desenvolvimento{' '}
-                                            <Tooltip title="Registre aqui resultados de escalas padronizadas (ex: Denver II, ABAS, Vineland) e outras avaliações quantitativas do desenvolvimento.">
-                                                <span
-                                                    style={{
-                                                        cursor: 'help',
-                                                        borderBottom: '1px dotted #999',
-                                                        display: 'inline-block',
-                                                        width: 16,
-                                                        textAlign: 'center'
-                                                    }}
-                                                >
-                                                    ?
-                                                </span>
-                                            </Tooltip>
-                                        </span>
-                                    }
-                                >
-                                    <TextArea rows={3} />
-                                </Form.Item>
-                                <Form.Item
-                                    name="evolution_report"
-                                    label="Relato de Evolução"
-                                    rules={[{ required: true, message: 'Obrigatório' }]}
-                                >
-                                    <TextArea
-                                        rows={6}
-                                        placeholder="Descreva a evolução do paciente..."
-                                    />
-                                </Form.Item>
-                                <Form.Item name="intermittences" label="Intercorrências">
-                                    <TextArea rows={2} />
-                                </Form.Item>
-                                <Form.Item name="notes" label="Observações Administrativas">
-                                    <Input />
-                                </Form.Item>
-                                <Divider />
-                                <Button type="primary" htmlType="submit" size="large">
-                                    Finalizar Atendimento
-                                </Button>
-                            </Form>
-                        </Card>
-                    </Col>
-                </Row>
-                <Modal
-                    title={editingMedication ? 'Editar medicação' : 'Adicionar medicação'}
-                    open={isMedModalOpen}
-                    onOk={handleSaveMedication}
-                    onCancel={() => setIsMedModalOpen(false)}
-                    destroyOnClose
+                <Cards
+                    title={`Atendimento: ${child?.name || '...'}`}
+                    extra={
+                        <Button key="1" onClick={() => router.back()}>
+                            Voltar
+                        </Button>
+                    }
                 >
-                    <Form form={medForm} layout="vertical">
-                        <Form.Item
-                            name="med_name"
-                            label="Nome do Medicamento"
-                            rules={[{ required: true, message: 'Obrigatório' }]}
-                        >
-                            <Input />
-                        </Form.Item>
-                        <Form.Item name="dosage" label="Dosagem">
-                            <Input placeholder="Ex: 5ml" />
-                        </Form.Item>
-                        <Form.Item name="schedule" label="Horários">
-                            <Input placeholder="Ex: 8h, 16h, 22h" />
-                        </Form.Item>
-                        <Form.Item name="frequency" label="Frequência">
-                            <Input placeholder="Ex: 1x ao dia" />
-                        </Form.Item>
-                        <Form.Item name="status" label="Status" initialValue="continuo">
-                            <Select>
-                                <Option value="continuo">Contínuo</Option>
-                                <Option value="sos">SOS (Se necessário)</Option>
-                                <Option value="interrompido">Interrompido</Option>
-                            </Select>
-                        </Form.Item>
-                    </Form>
-                </Modal>
+                    <Row gutter={25}>
+                        <Col xs={24} md={8}>
+                            <Cards title="Prontuário Clínico" headless={false}>
+                                <Descriptions column={1} layout="vertical">
+                                    <Descriptions.Item label="Diagnóstico">
+                                        {child?.diagnosis || '-'}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="Diagnóstico fechado">
+                                        {child?.is_diagnosis_closed ? 'Sim' : 'Em investigação'}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="Tipo Sanguíneo">
+                                        {child?.blood_type || '-'}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="Alergias">
+                                        {child?.allergies || '-'}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="Histórico Gestacional">
+                                        {child?.gestational_history || '-'}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="Peso atual">
+                                        {child?.weight != null ? `${child.weight} kg` : '-'}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="Altura">
+                                        {child?.height != null ? `${child.height} cm` : '-'}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="Perímetro Cefálico">
+                                        {child?.cephalic_perimeter != null
+                                            ? `${child.cephalic_perimeter} cm`
+                                            : '-'}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="Contato de Emergência">
+                                        {child?.emergency_contact || '-'}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="Necessidades específicas">
+                                        {assistanceNeedsText}
+                                    </Descriptions.Item>
+                                </Descriptions>
+                            </Cards>
+
+                            <Cards
+                                title="Medicação Ativa"
+                                style={{ marginTop: 25 }}
+                                headless={false}
+                                extra={
+                                    child && (
+                                        <Button size="small" type="primary" onClick={openAddMedicationModal}>
+                                            Adicionar medicação
+                                        </Button>
+                                    )
+                                }
+                            >
+                                <List
+                                    itemLayout="horizontal"
+                                    dataSource={medications}
+                                    locale={{ emptyText: 'Nenhuma medicação registrada' }}
+                                    renderItem={(item) => (
+                                        <List.Item
+                                            actions={[
+                                                <Button
+                                                    key="edit"
+                                                    size="small"
+                                                    type="link"
+                                                    onClick={() => openEditMedicationModal(item)}
+                                                >
+                                                    Editar
+                                                </Button>
+                                            ]}
+                                        >
+                                            <List.Item.Meta
+                                                avatar={
+                                                    <Avatar
+                                                        style={{ backgroundColor: '#87d068' }}
+                                                        children={item.med_name
+                                                            ?.substring(0, 1)
+                                                            .toUpperCase()}
+                                                    />
+                                                }
+                                                title={item.med_name}
+                                                description={`${item.dosage || ''} ${
+                                                    item.schedule ? `- ${item.schedule}` : ''
+                                                } ${item.frequency ? `(${item.frequency})` : ''}`}
+                                            />
+                                            <Tag>{item.status}</Tag>
+                                        </List.Item>
+                                    )}
+                                />
+                            </Cards>
+
+                            {child && (
+                                <Cards title="Arquivos de Prontuário" style={{ marginTop: 25 }} headless={false}>
+                                    <Row gutter={16}>
+                                        <Col span={24}>
+                                            <p>
+                                                <strong>Laudo médico:</strong>{' '}
+                                                {child.report_url ? (
+                                                    <a
+                                                        href={child.report_url}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                    >
+                                                        Ver arquivo
+                                                    </a>
+                                                ) : (
+                                                    'Não anexado'
+                                                )}
+                                            </p>
+                                            <Upload {...getUploadProps('report')}>
+                                                <Button size="small">Enviar Laudo</Button>
+                                            </Upload>
+                                        </Col>
+                                        <Col span={24} style={{ marginTop: 16 }}>
+                                            <p>
+                                                <strong>Documento da criança (RG/CPF):</strong>{' '}
+                                                {child.child_id_url ? (
+                                                    <a
+                                                        href={child.child_id_url}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                    >
+                                                        Ver arquivo
+                                                    </a>
+                                                ) : (
+                                                    'Não anexado'
+                                                )}
+                                            </p>
+                                            <Upload {...getUploadProps('child_id')}>
+                                                <Button size="small">Enviar Documento</Button>
+                                            </Upload>
+                                        </Col>
+                                        <Col span={24} style={{ marginTop: 16 }}>
+                                            <p>
+                                                <strong>Cartão de vacinação:</strong>{' '}
+                                                {child.vaccination_card_url ? (
+                                                    <a
+                                                        href={child.vaccination_card_url}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                    >
+                                                        Ver arquivo
+                                                    </a>
+                                                ) : (
+                                                    'Não anexado'
+                                                )}
+                                            </p>
+                                            <Upload {...getUploadProps('vaccination')}>
+                                                <Button size="small">Enviar Cartão</Button>
+                                            </Upload>
+                                        </Col>
+                                        <Col span={24} style={{ marginTop: 16 }}>
+                                            <p>
+                                                <strong>Histórico escolar:</strong>{' '}
+                                                {child.school_history_url ? (
+                                                    <a
+                                                        href={child.school_history_url}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                    >
+                                                        Ver arquivo
+                                                    </a>
+                                                ) : (
+                                                    'Não anexado'
+                                                )}
+                                            </p>
+                                            <Upload {...getUploadProps('school')}>
+                                                <Button size="small">Enviar Histórico</Button>
+                                            </Upload>
+                                        </Col>
+                                    </Row>
+                                </Cards>
+                            )}
+                        </Col>
+                        <Col xs={24} md={16}>
+                            <Cards title="Linha do Tempo Multidisciplinar" headless={false}>
+                                {evolutions.length === 0 ? (
+                                    <p>Nenhuma evolução registrada ainda.</p>
+                                ) : (
+                                    <Timeline mode="left">
+                                        {evolutions.map((evo) => {
+                                            const prof = evo.professional_id
+                                                ? professionalMap[evo.professional_id]
+                                                : null;
+                                            return (
+                                                <Timeline.Item
+                                                    key={evo.id}
+                                                    label={dayjs(evo.date_service).format(
+                                                        'DD/MM/YYYY HH:mm'
+                                                    )}
+                                                    color="blue"
+                                                >
+                                                    <p>
+                                                        <strong>{evo.service_type}</strong>
+                                                    </p>
+                                                    {prof && (
+                                                        <p>
+                                                            <small>
+                                                                Profissional: {prof.name}
+                                                                {prof.registry_number
+                                                                    ? ` (${prof.registry_number})`
+                                                                    : ''}
+                                                            </small>
+                                                        </p>
+                                                    )}
+                                                    <p>{evo.evolution_report}</p>
+                                                    {evo.protocol_scores && (
+                                                        <p>
+                                                            <small>
+                                                                Escalas / Avaliação:{' '}
+                                                                {evo.protocol_scores}
+                                                            </small>
+                                                        </p>
+                                                    )}
+                                                    {evo.intermittences && (
+                                                        <p style={{ color: 'red' }}>
+                                                            <small>
+                                                                Intercorrência: {evo.intermittences}
+                                                            </small>
+                                                        </p>
+                                                    )}
+                                                </Timeline.Item>
+                                            );
+                                        })}
+                                    </Timeline>
+                                )}
+                            </Cards>
+
+                            <Cards
+                                title="Registrar Evolução deste Atendimento"
+                                style={{ marginTop: 24 }}
+                                headless={false}
+                            >
+                                <Form form={form} layout="vertical" onFinish={handleFinish}>
+                                    <Form.Item
+                                        name="service_type"
+                                        label="Tipo de atendimento"
+                                        rules={[{ required: true, message: 'Obrigatório' }]}
+                                    >
+                                        <Select placeholder="Selecione o tipo de atendimento">
+                                            <Option value="Fisioterapia">Fisioterapia</Option>
+                                            <Option value="Psicologia">Psicologia</Option>
+                                            <Option value="Fonoaudiologia">Fonoaudiologia</Option>
+                                            <Option value="Terapia Ocupacional">
+                                                Terapia Ocupacional
+                                            </Option>
+                                            <Option value="Pedagogia">Pedagogia</Option>
+                                            <Option value="Médico">Médico</Option>
+                                        </Select>
+                                    </Form.Item>
+                                    <Form.Item name="weight" label="Peso atual (kg)">
+                                        <Input type="number" />
+                                    </Form.Item>
+                                    <Form.Item name="height" label="Altura atual (cm)">
+                                        <Input type="number" />
+                                    </Form.Item>
+                                    <Form.Item
+                                        name="cephalic_perimeter"
+                                        label="Perímetro Cefálico (cm)"
+                                    >
+                                        <Input type="number" />
+                                    </Form.Item>
+                                    <Form.Item
+                                        name="protocol_scores"
+                                        label={
+                                            <span>
+                                                Escalas / Avaliação do Desenvolvimento{' '}
+                                                <Tooltip title="Registre aqui resultados de escalas padronizadas (ex: Denver II, ABAS, Vineland) e outras avaliações quantitativas do desenvolvimento.">
+                                                    <span
+                                                        style={{
+                                                            cursor: 'help',
+                                                            borderBottom: '1px dotted #999',
+                                                            display: 'inline-block',
+                                                            width: 16,
+                                                            textAlign: 'center'
+                                                        }}
+                                                    >
+                                                        ?
+                                                    </span>
+                                                </Tooltip>
+                                            </span>
+                                        }
+                                    >
+                                        <TextArea rows={3} />
+                                    </Form.Item>
+                                    <Form.Item
+                                        name="evolution_report"
+                                        label="Relato de Evolução"
+                                        rules={[{ required: true, message: 'Obrigatório' }]}
+                                    >
+                                        <TextArea
+                                            rows={6}
+                                            placeholder="Descreva a evolução do paciente..."
+                                        />
+                                    </Form.Item>
+                                    <Form.Item name="intermittences" label="Intercorrências">
+                                        <TextArea rows={2} />
+                                    </Form.Item>
+                                    <Form.Item name="notes" label="Observações Administrativas">
+                                        <Input />
+                                    </Form.Item>
+                                    <Divider />
+                                    <Button type="primary" htmlType="submit" size="large">
+                                        Finalizar Atendimento
+                                    </Button>
+                                </Form>
+                            </Cards>
+                        </Col>
+                    </Row>
+                    <Modal
+                        title={editingMedication ? 'Editar medicação' : 'Adicionar medicação'}
+                        open={isMedModalOpen}
+                        onOk={handleSaveMedication}
+                        onCancel={() => setIsMedModalOpen(false)}
+                        destroyOnClose
+                    >
+                        <Form form={medForm} layout="vertical">
+                            <Form.Item
+                                name="med_name"
+                                label="Nome do Medicamento"
+                                rules={[{ required: true, message: 'Obrigatório' }]}
+                            >
+                                <Input />
+                            </Form.Item>
+                            <Form.Item name="dosage" label="Dosagem">
+                                <Input placeholder="Ex: 5ml" />
+                            </Form.Item>
+                            <Form.Item name="schedule" label="Horários">
+                                <Input placeholder="Ex: 8h, 16h, 22h" />
+                            </Form.Item>
+                            <Form.Item name="frequency" label="Frequência">
+                                <Input placeholder="Ex: 1x ao dia" />
+                            </Form.Item>
+                            <Form.Item name="status" label="Status" initialValue="continuo">
+                                <Select>
+                                    <Option value="continuo">Contínuo</Option>
+                                    <Option value="sos">SOS (Se necessário)</Option>
+                                    <Option value="interrompido">Interrompido</Option>
+                                </Select>
+                            </Form.Item>
+                        </Form>
+                    </Modal>
+                </Cards>
             </Main>
         </>
     );

@@ -358,6 +358,8 @@ class Family(Base):
     birth_date = Column(Date, nullable=True)
     gender = Column(String, nullable=True)
     nationality = Column(String, default="Brasileira")
+    marital_status = Column(String, nullable=True)
+    profession = Column(String, nullable=True)
 
     # Address & Geolocation
     address_full = Column(Text, nullable=True)
@@ -382,7 +384,7 @@ class Family(Base):
     housing_conditions = Column(Text, nullable=True)
 
     # Assistance & Observations
-    assistance_status = Column(Text, nullable=True) # Comma separated list or JSON
+    assistance_status = Column(String, default="active") # active, inactive, suspended
     family_observations = Column(Text, nullable=True)
 
     # Documentation URLs

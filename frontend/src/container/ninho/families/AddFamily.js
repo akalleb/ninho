@@ -220,6 +220,20 @@ function AddFamily() {
                           </Form.Item>
                       </Col>
                       <Col xs={24} md={6}>
+                          <Form.Item name="gender" label="Sexo">
+                              <Select>
+                                  <Option value="feminino">Feminino</Option>
+                                  <Option value="masculino">Masculino</Option>
+                                  <Option value="outro">Outro</Option>
+                              </Select>
+                          </Form.Item>
+                      </Col>
+                      <Col xs={24} md={6}>
+                          <Form.Item name="nationality" label="Nacionalidade" initialValue="Brasileira">
+                              <Input />
+                          </Form.Item>
+                      </Col>
+                      <Col xs={24} md={6}>
                           <Form.Item name="phone" label="Telefone / Celular">
                               <Input />
                           </Form.Item>
@@ -311,6 +325,15 @@ function AddFamily() {
                                   <Option value="baixa_renda">Baixa Renda</Option>
                                   <Option value="inseguranca_alimentar">Insegurança Alimentar</Option>
                                   <Option value="outros">Outros</Option>
+                              </Select>
+                          </Form.Item>
+                      </Col>
+                      <Col xs={24} md={8}>
+                          <Form.Item name="assistance_status" label="Status da Assistência" initialValue="active">
+                              <Select>
+                                  <Option value="active">Ativo</Option>
+                                  <Option value="inactive">Inativo</Option>
+                                  <Option value="suspended">Suspenso</Option>
                               </Select>
                           </Form.Item>
                       </Col>

@@ -280,7 +280,24 @@ function WalletDetails({ walletId }) {
           title: 'Status',
           dataIndex: 'status',
           key: 'status',
-          render: (status) => <Tag>{status.toUpperCase()}</Tag>
+          render: (status, record) => {
+              const statusMap = {
+                  'recebido': { color: 'success', text: 'Recebido', icon: 'check-circle' },
+                  'pago': { color: 'success', text: 'Pago', icon: 'check-circle' },
+                  'conciliado': { color: 'purple', text: 'Conciliado', icon: 'check-square' },
+                  'pendente': { color: 'warning', text: 'Pendente', icon: 'clock' },
+                  'agendado': { color: 'processing', text: 'Agendado', icon: 'calendar' },
+                  'cancelado': { color: 'error', text: 'Cancelado', icon: 'x-circle' }
+              };
+              
+              const current = statusMap[status] || { color: 'default', text: status, icon: 'info' };
+              
+              return (
+                  <Tag icon={<FeatherIcon icon={current.icon} size={12} />} color={current.color}>
+                      {current.text.toUpperCase()}
+                  </Tag>
+              );
+          }
       }
   ];
 

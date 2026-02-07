@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Table, Button, Input, Select, Tag, Modal, App, Card, Tooltip } from 'antd';
+import { Row, Col, Table, Button, Input, Select, Tag, App, Tooltip, Skeleton, Popconfirm } from 'antd';
 import FeatherIcon from 'feather-icons-react';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '../../../components/page-headers/page-headers';
@@ -46,22 +46,14 @@ function Families() {
     fetchFamilies();
   }, [filters]);
 
-  const handleDelete = (id) => {
-    Modal.confirm({
-      title: 'Excluir Família',
-      content: 'Tem certeza que deseja excluir este cadastro? Esta ação é irreversível.',
-      okText: 'Sim, Excluir',
-      okType: 'danger',
-      onOk: async () => {
-        try {
-          await api.delete(`/families/${id}`);
-          notification.success({ message: 'Família excluída com sucesso' });
-          fetchFamilies();
-        } catch (error) {
-          notification.error({ message: 'Erro ao excluir' });
-        }
-      }
-    });
+  const handleDelete = async (id) => {
+    try {
+      await api.delete(`/families/${id}`);
+      notification.success({ message: 'Família excluída com sucesso' });
+      fetchFamilies();
+    } catch (error) {
+      notification.error({ message: 'Erro ao excluir' });
+    }
   };
 
   const columns = [
@@ -87,9 +79,9 @@ function Families() {
       key: 'vulnerability_status',
       render: (status) => {
           const map = {
-              'desemprego': { color: 'red', label: 'Desemprego' },
-              'baixa_renda': { color: 'orange', label: 'Baixa Renda' },
-              'inseguranca_alimentar': { color: 'volcano', label: 'Inseg. Alimentar' },
+              'desemprego': { color: 'error', label: 'Desemprego' },
+              'baixa_renda': { color: 'warning', label: 'Baixa Renda' },
+              'inseguranca_alimentar': { color: 'magenta', label: 'Inseg. Alimentar' },
               'outros': { color: 'blue', label: 'Outros' }
           };
           const item = map[status] || { color: 'default', label: status };
@@ -104,10 +96,13 @@ function Families() {
             const isLowIncome = perCapita < 218; // Example threshold for Bolsa Família approx
             return (
                 <div>
-                    R$ {perCapita.toFixed(2)}
+                    <span style={{ fontWeight: 600 }}>R$ {perCapita.toFixed(2)}</span>
+                    <Tooltip title="Cálculo: Renda Familiar Total / (1 + Nº Dependentes). Se < R$ 218,00 indica possível Baixa Renda.">
+                         <FeatherIcon icon="help-circle" size={14} style={{ marginLeft: 5, color: '#888', cursor: 'pointer' }} />
+                    </Tooltip>
                     {isLowIncome && (
-                        <Tooltip title="Possível Baixa Renda (Critério Federal)">
-                             <FeatherIcon icon="alert-circle" size={14} style={{ marginLeft: 5, color: '#faad14' }} />
+                        <Tooltip title="Atenção: Valor abaixo do critério federal de baixa renda (R$ 218,00)">
+                             <FeatherIcon icon="alert-triangle" size={14} style={{ marginLeft: 5, color: '#faad14' }} />
                         </Tooltip>
                     )}
                 </div>
@@ -122,16 +117,23 @@ function Families() {
           <Button 
             size="small" 
             type="primary" 
-            ghost 
             icon={<FeatherIcon icon="edit" size={14} />} 
             onClick={() => router.push(`/admin/families/edit?id=${record.id}`)}
           />
-          <Button 
-            size="small" 
-            danger 
-            icon={<FeatherIcon icon="trash-2" size={14} />} 
-            onClick={() => handleDelete(record.id)}
-          />
+          <Popconfirm
+            title="Tem certeza que deseja excluir este cadastro?"
+            description="Esta ação é irreversível."
+            onConfirm={() => handleDelete(record.id)}
+            okText="Sim"
+            cancelText="Não"
+          >
+            <Button 
+              size="small" 
+              type="primary"
+              danger 
+              icon={<FeatherIcon icon="trash-2" size={14} />} 
+            />
+          </Popconfirm>
         </div>
       ),
     },
@@ -149,7 +151,7 @@ function Families() {
         ]}
       />
       <Main>
-        <Card>
+        <Cards>
             <Row gutter={25} style={{ marginBottom: 25 }}>
                 <Col xs={24} md={8}>
                     <Input 
@@ -185,14 +187,17 @@ function Families() {
                 </Col>
             </Row>
             
-            <Table 
-                dataSource={families} 
-                columns={columns} 
-                rowKey="id" 
-                loading={loading}
-                pagination={{ pageSize: 10 }}
-            />
-        </Card>
+            {loading ? (
+                <Skeleton active />
+            ) : (
+                <Table 
+                    dataSource={families} 
+                    columns={columns} 
+                    rowKey="id" 
+                    pagination={{ pageSize: 10 }}
+                />
+            )}
+        </Cards>
       </Main>
     </>
   );

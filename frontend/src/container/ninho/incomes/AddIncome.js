@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Form, Input, Select, DatePicker, Button, Card, App, Upload, InputNumber } from 'antd';
+import { Row, Col, Form, Input, Select, DatePicker, Button, App, Upload, InputNumber } from 'antd';
 import FeatherIcon from 'feather-icons-react';
-import { PageHeader } from '../../../components/page-headers/page-headers';
 import { Main } from '../../styled';
+import { Cards } from '../../../components/cards/frame/cards-frame';
 import api from '../../../config/api/axios';
 import { useRouter } from 'next/navigation';
 
@@ -98,11 +98,22 @@ function AddIncome() {
 
   return (
     <>
-      <PageHeader ghost title="Nova Receita (Entrada)" />
       <Main>
         <Row gutter={25}>
           <Col xs={24} md={12}>
-            <Card title="Dados do Recebimento">
+            <Cards 
+                title="Nova Receita (Entrada)"
+                extra={
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <Button onClick={() => router.push('/admin/incomes')}>
+                        Cancelar
+                      </Button>
+                      <Button type="primary" onClick={() => form.submit()} loading={loading}>
+                        Confirmar Entrada
+                      </Button>
+                    </div>
+                }
+            >
               <Form
                 form={form}
                 layout="vertical"
@@ -200,20 +211,9 @@ function AddIncome() {
                       <TextArea rows={3} />
                     </Form.Item>
                   </Col>
-
-                  <Col xs={24}>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '30px' }}>
-                      <Button onClick={() => router.push('/admin/incomes')}>
-                        Cancelar
-                      </Button>
-                      <Button type="primary" htmlType="submit" loading={loading} size="large">
-                        Confirmar Entrada
-                      </Button>
-                    </div>
-                  </Col>
                 </Row>
               </Form>
-            </Card>
+            </Cards>
           </Col>
         </Row>
       </Main>

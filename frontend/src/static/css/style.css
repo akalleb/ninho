@@ -3422,3 +3422,20 @@ html[dir='rtl'] .ml-10 {
 .min-h-600 {
   min-height: 600px;
 }
+
+/* Global Table Contrast Fix */
+.ant-table {
+  background: #ffffff;
+  color: #5a5f7d;
+}
+.ant-table-thead > tr > th {
+  color: #272b41;
+  font-weight: 600;
+  background: #f8f9fb;
+}
+.ant-table-tbody > tr > td {
+  color: #5a5f7d;
+}
+.ant-table-tbody > tr.ant-table-row:hover > td {
+  background: #f8f9fb;
+}

@@ -125,7 +125,7 @@ function QueuePage() {
             title: 'Criança',
             dataIndex: 'child',
             key: 'child',
-            render: (child) => child?.name || 'N/A',
+            render: (child) => <span style={{ fontWeight: 600 }}>{child?.name || 'N/A'}</span>,
         },
         {
             title: 'Profissional',
@@ -141,9 +141,9 @@ function QueuePage() {
                 let color = 'default';
                 let text = status;
                 if (status === 'agendado') { color = 'blue'; text = 'Agendado'; }
-                if (status === 'em_espera') { color = 'orange'; text = 'Em Espera'; }
+                if (status === 'em_espera') { color = 'gold'; text = 'Em Espera'; }
                 if (status === 'em_atendimento') { color = 'green'; text = 'Em Atendimento'; }
-                if (status === 'finalizado') { color = 'gray'; text = 'Finalizado'; }
+                if (status === 'finalizado') { color = 'default'; text = 'Finalizado'; }
                 return <Tag color={color}>{text}</Tag>;
             }
         },
@@ -171,7 +171,7 @@ function QueuePage() {
                     <Tooltip title="Editar">
                         <Button 
                             size="small" 
-                            type="default" 
+                            type="primary" 
                             shape="circle" 
                             icon={<FeatherIcon icon="edit-2" size={14} />} 
                             onClick={() => handleOpenModal(record)}
@@ -186,7 +186,8 @@ function QueuePage() {
                         <Tooltip title="Excluir">
                             <Button 
                                 size="small" 
-                                type="danger" 
+                                type="primary"
+                                danger
                                 shape="circle" 
                                 icon={<FeatherIcon icon="trash-2" size={14} />} 
                             />

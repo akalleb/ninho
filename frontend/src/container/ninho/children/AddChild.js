@@ -1,10 +1,10 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Form, Input, Select, Button, DatePicker, InputNumber, Switch, Upload, message, App, Card, AutoComplete } from 'antd';
+import { Row, Col, Form, Input, Select, Button, DatePicker, InputNumber, Switch, Upload, message, App, Card } from 'antd';
 import FeatherIcon from 'feather-icons-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { PageHeader } from '../../../components/page-headers/page-headers';
 import { Main } from '../../styled';
+import { Cards } from '../../../components/cards/frame/cards-frame';
 import api from '../../../config/api/axios';
 import dayjs from 'dayjs';
 
@@ -129,16 +129,16 @@ function AddChild() {
 
   return (
     <>
-      <PageHeader
-        ghost
-        title={isEditMode ? 'Editar Criança' : 'Nova Criança'}
-        buttons={[
-          <Button key="back" onClick={() => router.push('/admin/children')}>Cancelar</Button>,
-          <Button key="save" type="primary" onClick={handleSave} loading={loading}>Salvar</Button>
-        ]}
-      />
       <Main>
-        <Card>
+        <Cards
+            title={isEditMode ? 'Editar Criança' : 'Nova Criança'}
+            extra={
+                <div style={{ display: 'flex', gap: 10 }}>
+                    <Button key="back" onClick={() => router.push('/admin/children')}>Cancelar</Button>
+                    <Button key="save" type="primary" onClick={handleSave} loading={loading}>Salvar</Button>
+                </div>
+            }
+        >
             <Form form={form} layout="vertical">
                 <Row gutter={25}>
                     <Col xs={24} md={12}>
@@ -183,7 +183,7 @@ function AddChild() {
                     </Col>
                 </Row>
                 
-                <Card type="inner" title="Dados Clínicos" style={{ marginTop: 20 }}>
+                <Cards title="Dados Clínicos" headless={false} style={{ marginTop: 20 }}>
                     <Row gutter={25}>
                         <Col xs={24} md={8}>
                             <Form.Item
@@ -320,9 +320,9 @@ function AddChild() {
                           </Col>
                         )}
                     </Row>
-                </Card>
+                </Cards>
 
-                <Card type="inner" title="Educação" style={{ marginTop: 20 }}>
+                <Cards title="Educação" headless={false} style={{ marginTop: 20 }}>
                      <Row gutter={25}>
                         <Col xs={24} md={12}>
                             <Form.Item name="current_school" label="Escola Atual">
@@ -354,9 +354,9 @@ function AddChild() {
                             </Form.Item>
                         </Col>
                      </Row>
-                </Card>
+                </Cards>
             </Form>
-        </Card>
+        </Cards>
       </Main>
     </>
   );

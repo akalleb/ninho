@@ -1,10 +1,11 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Table, Button, Input, Select, Tag, Modal, App, Card } from 'antd';
+import { Row, Col, Table, Button, Input, Select, Tag, Modal, App, Skeleton } from 'antd';
 import FeatherIcon from 'feather-icons-react';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '../../../components/page-headers/page-headers';
 import { Main } from '../../styled';
+import { Cards } from '../../../components/cards/frame/cards-frame';
 import api from '../../../config/api/axios';
 
 const { Option } = Select;
@@ -66,8 +67,9 @@ function ChildrenList() {
         dataIndex: 'severity_level',
         key: 'severity_level',
         render: (text) => {
-            const colors = { leve: 'green', media: 'orange', grave: 'red' };
-            return text ? <Tag color={colors[text] || 'default'}>{text.toUpperCase()}</Tag> : '-';
+            const colors = { leve: 'success', media: 'warning', grave: 'error' };
+            const labels = { leve: 'LEVE', media: 'MÉDIO', grave: 'GRAVE' };
+            return text ? <Tag color={colors[text] || 'default'}>{labels[text] || text.toUpperCase()}</Tag> : '-';
         }
     },
     {
@@ -82,6 +84,7 @@ function ChildrenList() {
         <div style={{ display: 'flex', gap: 10 }}>
            <Button 
             size="small" 
+            type="primary"
             title="Prontuário / Dashboard"
             icon={<FeatherIcon icon="activity" size={14} />} 
             onClick={() => router.push(`/admin/children/${record.id}/dashboard`)}
@@ -89,7 +92,6 @@ function ChildrenList() {
           <Button 
             size="small" 
             type="primary" 
-            ghost 
             icon={<FeatherIcon icon="edit" size={14} />} 
             onClick={() => router.push(`/admin/children/edit?id=${record.id}`)}
           />
@@ -105,12 +107,12 @@ function ChildrenList() {
         title="Prontuário das Crianças"
         buttons={[
           <Button key="1" type="primary" onClick={() => router.push('/admin/children/add')}>
-            <FeatherIcon icon="plus" size={14} /> Nova Criança
+            <FeatherIcon icon="plus" size={14} /> Novo Cadastro
           </Button>,
         ]}
       />
       <Main>
-        <Card>
+        <Cards>
             <Row gutter={25} style={{ marginBottom: 25 }}>
                 <Col xs={24} md={12}>
                     <Input 
@@ -126,13 +128,17 @@ function ChildrenList() {
                 </Col>
             </Row>
             
-            <Table 
-                dataSource={children} 
-                columns={columns} 
-                rowKey="id" 
-                loading={loading}
-            />
-        </Card>
+            {loading ? (
+                <Skeleton active />
+            ) : (
+                <Table 
+                    dataSource={children} 
+                    columns={columns} 
+                    rowKey="id" 
+                    pagination={{ pageSize: 10, showSizeChanger: true }}
+                />
+            )}
+        </Cards>
       </Main>
     </>
   );

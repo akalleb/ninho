@@ -79,7 +79,9 @@ class FamilyBase(BaseModel):
     birth_date: date | None = None
     gender: str | None = None
     nationality: str | None = "Brasileira"
-
+    marital_status: str | None = None
+    profession: str | None = None
+    
     address_full: str | None = None
     neighborhood: str | None = None
     city: str | None = None
@@ -98,8 +100,8 @@ class FamilyBase(BaseModel):
     dependents_count: int = 0
     vulnerability_status: str | None = "baixa_renda"
     housing_conditions: str | None = None
+    assistance_status: str | None = "active"
 
-    assistance_status: str | None = None
     family_observations: str | None = None
     
     residence_proof_url: str | None = None

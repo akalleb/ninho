@@ -1,9 +1,8 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Button, Modal, App, Tag, Card, Statistic, Empty, Skeleton } from 'antd';
+import { Row, Col, Button, Modal, App, Tag, Card, Statistic, Empty, Skeleton, Popconfirm } from 'antd';
 import FeatherIcon from 'feather-icons-react';
 import { useRouter } from 'next/navigation';
-import { PageHeader } from '../../../components/page-headers/page-headers';
 import { Main } from '../../styled';
 import api from '../../../config/api/axios';
 import { Cards } from '../../../components/cards/frame/cards-frame';
@@ -38,27 +37,18 @@ function Wallets() {
   };
 
   const handleDelete = async (id) => {
-    Modal.confirm({
-      title: 'Tem certeza que deseja excluir esta carteira?',
-      content: 'Esta ação não pode ser desfeita.',
-      okText: 'Sim, Excluir',
-      okType: 'danger',
-      cancelText: 'Cancelar',
-      onOk: async () => {
-        try {
-          await api.delete(`/wallets/${id}`);
-          notification.success({
-            message: 'Carteira excluída com sucesso',
-          });
-          fetchWallets();
-        } catch (error) {
-          notification.error({
-            message: 'Erro ao excluir carteira',
-            description: error.message,
-          });
-        }
-      },
-    });
+    try {
+      await api.delete(`/wallets/${id}`);
+      notification.success({
+        message: 'Carteira excluída com sucesso',
+      });
+      fetchWallets();
+    } catch (error) {
+      notification.error({
+        message: 'Erro ao excluir carteira',
+        description: error.message,
+      });
+    }
   };
 
   const getCategoryLabel = (cat) => {
@@ -74,16 +64,13 @@ function Wallets() {
 
   return (
     <>
-      <PageHeader
-        ghost
-        title="Gestão de Carteiras (Fundos)"
-        buttons={[
-          <Button key="1" type="primary" size="small" onClick={() => router.push('/admin/wallets/add')}>
-            <FeatherIcon icon="plus" size={14} /> Nova Carteira
-          </Button>,
-        ]}
-      />
       <Main>
+        <div style={{ marginBottom: 25, display: 'flex', justifyContent: 'flex-end' }}>
+             <Button key="1" type="primary" size="large" onClick={() => router.push('/admin/wallets/add')}>
+                <FeatherIcon icon="plus" size={14} /> Nova Carteira
+            </Button>
+        </div>
+
         {loading ? (
             <Skeleton active />
         ) : wallets.length === 0 ? (
@@ -111,7 +98,7 @@ function Wallets() {
                                 value={wallet.balance} 
                                 precision={2} 
                                 prefix="R$" 
-                                valueStyle={{ color: wallet.balance < 0 ? '#cf1322' : '#3f8600' }}
+                                valueStyle={{ color: wallet.balance < 0 ? '#cf1322' : '#3f8600', fontWeight: 'bold' }}
                             />
                         </div>
 
@@ -122,22 +109,26 @@ function Wallets() {
                         )}
 
                         <div style={{ display: 'flex', gap: 10, marginTop: 'auto' }}>
-                            <Button block type="default" onClick={() => router.push(`/admin/wallets/${wallet.id}`)}>
+                            <Button block type="primary" onClick={() => router.push(`/admin/wallets/${wallet.id}`)}>
                                 Ver Dashboard
                             </Button>
                             <Button 
                                 type="primary" 
-                                ghost 
                                 icon={<FeatherIcon icon="edit" size={14} />} 
                                 onClick={() => handleEdit(wallet.id)}
                             />
-                            <Button 
-                                type="primary" 
-                                danger 
-                                ghost 
-                                icon={<FeatherIcon icon="trash-2" size={14} />} 
-                                onClick={() => handleDelete(wallet.id)}
-                            />
+                            <Popconfirm
+                                title="Tem certeza que deseja excluir esta carteira?"
+                                onConfirm={() => handleDelete(wallet.id)}
+                                okText="Sim"
+                                cancelText="Não"
+                            >
+                                <Button 
+                                    type="primary" 
+                                    danger 
+                                    icon={<FeatherIcon icon="trash-2" size={14} />} 
+                                />
+                            </Popconfirm>
                         </div>
                     </Cards>
                 </Col>

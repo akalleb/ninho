@@ -1,10 +1,9 @@
-'use client';
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Form, Input, Select, Button, Card, App, Switch, InputNumber } from 'antd';
-import { PageHeader } from '../../../components/page-headers/page-headers';
 import { Main } from '../../styled';
 import api from '../../../config/api/axios';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Cards } from '../../../components/cards/frame/cards-frame';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -63,19 +62,22 @@ function AddWallet() {
 
   return (
     <>
-      <PageHeader
-        ghost
-        title={isEditMode ? `Editar Carteira: ${form.getFieldValue('name') || ''}` : "Nova Carteira"}
-        buttons={[
-          <Button key="1" type="primary" onClick={form.submit}>
-            {isEditMode ? 'Salvar Alterações' : 'Criar Carteira'}
-          </Button>,
-        ]}
-      />
       <Main>
         <Row gutter={25}>
           <Col xs={24}>
-            <Card title="Dados Cadastrais">
+            <Cards 
+                title={isEditMode ? `Editar Carteira` : "Nova Carteira"}
+                extra={
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <Button onClick={() => router.push('/admin/wallets')}>
+                        Cancelar
+                      </Button>
+                      <Button type="primary" onClick={() => form.submit()} loading={loading}>
+                        {isEditMode ? 'Salvar Alterações' : 'Criar Carteira'}
+                      </Button>
+                    </div>
+                }
+            >
               <Form
                 form={form}
                 layout="vertical"
@@ -124,27 +126,13 @@ function AddWallet() {
                             <Switch checkedChildren="Sim" unCheckedChildren="Não" />
                         </Form.Item>
                     </Col>
-                    {/* Saldo inicial apenas na criação ou exibição readonly na edição? 
-                        O prompt não especificou, mas geralmente saldo não se edita direto.
-                        Vou deixar editável apenas se for criação, ou assumir que por enquanto é simples.
-                        Vou deixar oculto na criação (default 0) e readonly na edição para segurança.
-                    */}
                 </Row>
 
                 <Form.Item name="description" label="Descrição / Finalidade">
                   <TextArea rows={4} />
                 </Form.Item>
-
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '30px' }}>
-                  <Button onClick={() => router.push('/admin/wallets')}>
-                    Cancelar
-                  </Button>
-                  <Button type="primary" htmlType="submit" loading={loading} size="large">
-                    Salvar Carteira
-                  </Button>
-                </div>
               </Form>
-            </Card>
+            </Cards>
           </Col>
         </Row>
       </Main>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Table, Button, Modal, App, Select, Tag } from 'antd';
+import { Row, Col, Table, Button, Modal, App, Select, Tag, Popconfirm, Skeleton } from 'antd';
 import FeatherIcon from 'feather-icons-react';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '../../../components/page-headers/page-headers';
@@ -47,27 +47,18 @@ function ResourceSourceDataTable() {
   };
 
   const handleDelete = async (id) => {
-    Modal.confirm({
-      title: 'Tem certeza que deseja excluir esta fonte?',
-      content: 'Esta ação não pode ser desfeita.',
-      okText: 'Sim, Excluir',
-      okType: 'danger',
-      cancelText: 'Cancelar',
-      onOk: async () => {
-        try {
-          await api.delete(`/resource-sources/${id}`);
-          notification.success({
-            message: 'Fonte excluída com sucesso',
-          });
-          fetchSources();
-        } catch (error) {
-          notification.error({
-            message: 'Erro ao excluir fonte',
-            description: error.message,
-          });
-        }
-      },
-    });
+    try {
+      await api.delete(`/resource-sources/${id}`);
+      notification.success({
+        message: 'Fonte excluída com sucesso',
+      });
+      fetchSources();
+    } catch (error) {
+      notification.error({
+        message: 'Erro ao excluir fonte',
+        description: error.message,
+      });
+    }
   };
 
   const columns = [
@@ -112,7 +103,7 @@ function ResourceSourceDataTable() {
         let text = status;
         if (status === 'active') { color = 'success'; text = 'Ativo'; }
         if (status === 'inactive') { color = 'error'; text = 'Inativo'; }
-        if (status === 'in_progress') { color = 'processing'; text = 'Em Vigência'; }
+        if (status === 'in_progress') { color = 'warning'; text = 'Em Vigência'; }
         
         return <Tag color={color}>{text}</Tag>;
       }
@@ -134,13 +125,19 @@ function ResourceSourceDataTable() {
             icon={<FeatherIcon icon="edit" size={14} />}
             onClick={() => handleEdit(record.id)}
           />
-          <Button 
-            size="small" 
-            type="primary"
-            danger 
-            icon={<FeatherIcon icon="trash-2" size={14} />}
-            onClick={() => handleDelete(record.id)}
-          />
+          <Popconfirm
+            title="Tem certeza que deseja excluir esta fonte?"
+            onConfirm={() => handleDelete(record.id)}
+            okText="Sim"
+            cancelText="Não"
+          >
+            <Button 
+              size="small" 
+              type="primary"
+              danger 
+              icon={<FeatherIcon icon="trash-2" size={14} />}
+            />
+          </Popconfirm>
         </div>
       ),
     },
@@ -152,7 +149,7 @@ function ResourceSourceDataTable() {
         ghost
         title="Gestão de Fontes de Recursos"
         buttons={[
-          <Button key="1" type="primary" size="small" onClick={() => router.push('/admin/resource-sources/add')}>
+          <Button key="1" type="primary" onClick={() => router.push('/admin/resource-sources/add')}>
             <FeatherIcon icon="plus" size={14} /> Nova Fonte
           </Button>,
         ]}
@@ -160,7 +157,7 @@ function ResourceSourceDataTable() {
       <Main>
         <Row gutter={25}>
           <Col xs={24}>
-            <Cards headless>
+            <Cards>
               <div style={{ marginBottom: 20, display: 'flex', gap: 15 }}>
                 <Select 
                     placeholder="Filtrar por Tipo" 
@@ -185,15 +182,18 @@ function ResourceSourceDataTable() {
                     <Option value="inactive">Inativo</Option>
                 </Select>
               </div>
-              <Table
-                className="table-responsive"
-                pagination={{ pageSize: 10 }}
-                locale={{ emptyText: 'Nenhuma fonte cadastrada' }}
-                dataSource={sources}
-                columns={columns}
-                loading={loading}
-                rowKey="id"
-              />
+              {loading ? (
+                <Skeleton active />
+              ) : (
+                <Table
+                  className="table-responsive"
+                  pagination={{ pageSize: 10 }}
+                  locale={{ emptyText: 'Nenhuma fonte cadastrada' }}
+                  dataSource={sources}
+                  columns={columns}
+                  rowKey="id"
+                />
+              )}
             </Cards>
           </Col>
         </Row>

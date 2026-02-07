@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Table, Button, App, Select, DatePicker, Tag, Modal, Form, Input, Upload, Tooltip, Badge, Tabs } from 'antd';
+import { Row, Col, Table, Button, App, Select, DatePicker, Tag, Modal, Form, Input, Upload, Tooltip, Badge, Tabs, Skeleton } from 'antd';
 import FeatherIcon from 'feather-icons-react';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '../../../components/page-headers/page-headers';
@@ -147,7 +147,7 @@ function IncomeDataTable() {
       title: 'Valor',
       dataIndex: 'amount',
       key: 'amount',
-      render: (value) => <span style={{ color: '#3f8600', fontWeight: 'bold' }}>R$ {value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+      render: (value) => <span style={{ color: '#3f8600', fontWeight: 600 }}>R$ {value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
     },
     {
       title: 'Status',
@@ -204,7 +204,7 @@ function IncomeDataTable() {
         ghost
         title="Entradas de Receita"
         buttons={[
-          <Button key="1" type="primary" size="small" onClick={() => router.push('/admin/incomes/add')}>
+          <Button key="1" type="primary" onClick={() => router.push('/admin/incomes/add')}>
             <FeatherIcon icon="plus" size={14} /> Nova Receita
           </Button>,
         ]}
@@ -212,7 +212,7 @@ function IncomeDataTable() {
       <Main>
         <Row gutter={25}>
           <Col xs={24}>
-            <Cards headless>
+            <Cards>
               <Tabs 
                 defaultActiveKey="all" 
                 onChange={setActiveTab}
@@ -250,15 +250,18 @@ function IncomeDataTable() {
                     {wallets.map(w => <Option key={w.id} value={w.id}>{w.name}</Option>)}
                 </Select>
               </div>
-              <Table
-                className="table-responsive"
-                pagination={{ pageSize: 10 }}
-                locale={{ emptyText: 'Nenhuma receita registrada' }}
-                dataSource={incomes}
-                columns={columns}
-                loading={loading}
-                rowKey="id"
-              />
+              {loading ? (
+                <Skeleton active />
+              ) : (
+                <Table
+                    className="table-responsive"
+                    pagination={{ pageSize: 10 }}
+                    locale={{ emptyText: 'Nenhuma receita registrada' }}
+                    dataSource={incomes}
+                    columns={columns}
+                    rowKey="id"
+                />
+              )}
             </Cards>
           </Col>
         </Row>
