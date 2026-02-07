@@ -27,6 +27,7 @@ function ChildDashboard({ params }) {
   // Modal States
   const [isEvoModalOpen, setIsEvoModalOpen] = useState(false);
   const [isMedModalOpen, setIsMedModalOpen] = useState(false);
+  const [editingMedication, setEditingMedication] = useState(null);
   const [formEvo] = Form.useForm();
   const [formMed] = Form.useForm();
 
@@ -99,34 +100,118 @@ function ChildDashboard({ params }) {
           const values = await formEvo.validateFields();
           const professionalId =
               authUser && authUser.id && authUser.role === 'health' ? authUser.id : null;
+
+          let protocolScores = values.protocol_scores || '';
+          const biometricsParts = [];
+          if (values.weight != null) biometricsParts.push(`Peso: ${values.weight} kg`);
+          if (values.height != null) biometricsParts.push(`Altura: ${values.height} cm`);
+          if (values.cephalic_perimeter != null) biometricsParts.push(`PC: ${values.cephalic_perimeter} cm`);
+          if (biometricsParts.length) {
+              const biometricsText = `Biometria atual - ${biometricsParts.join(' | ')}`;
+              protocolScores = protocolScores ? `${protocolScores}\n${biometricsText}` : biometricsText;
+          }
+
           await api.post(`/children/${childId}/evolutions`, {
-              ...values,
+              service_type: values.service_type,
+              evolution_report: values.evolution_report,
+              intermittences: values.intermittences,
+              protocol_scores: protocolScores,
               child_id: parseInt(childId, 10),
               professional_id: professionalId
           });
+
+          if (biometricsParts.length) {
+              const updatedChild = {
+                  ...child,
+                  weight: values.weight != null ? values.weight : child.weight,
+                  height: values.height != null ? values.height : child.height,
+                  cephalic_perimeter:
+                      values.cephalic_perimeter != null
+                          ? values.cephalic_perimeter
+                          : child.cephalic_perimeter
+              };
+              await api.put(`/children/${childId}`, updatedChild);
+          }
+
           message.success("Evolução registrada!");
           setIsEvoModalOpen(false);
           formEvo.resetFields();
-          fetchData(); // Refresh timeline
+          fetchData(); 
       } catch (e) {
           console.error('Erro ao registrar evolução', e?.response?.data || e);
           message.error("Erro ao registrar evolução.");
       }
   };
 
-  const handleAddMedication = async () => {
+  const openAddMedicationModal = () => {
+      setEditingMedication(null);
+      formMed.resetFields();
+      setIsMedModalOpen(true);
+  };
+
+  const openEditMedicationModal = (med) => {
+      setEditingMedication(med);
+      formMed.setFieldsValue({
+          med_name: med.med_name,
+          dosage: med.dosage,
+          schedule: med.schedule,
+          frequency: med.frequency,
+          status: med.status || 'continuo',
+      });
+      setIsMedModalOpen(true);
+  };
+
+  const handleSaveMedication = async () => {
       try {
           const values = await formMed.validateFields();
-          await api.post(`/children/${childId}/medications`, {
-              ...values,
-              child_id: parseInt(childId)
+          const professionalId =
+              authUser && authUser.id && authUser.role === 'health' ? authUser.id : null;
+
+          if (editingMedication) {
+              await api.put(`/medications/${editingMedication.id}`, values);
+              message.success("Medicação atualizada!");
+          } else {
+              await api.post(`/children/${childId}/medications`, {
+                  ...values,
+                  child_id: parseInt(childId, 10),
+              });
+              message.success("Medicação adicionada!");
+          }
+
+          const medParts = [];
+          if (values.med_name) medParts.push(values.med_name);
+          if (values.dosage) medParts.push(`Dosagem: ${values.dosage}`);
+          if (values.schedule) medParts.push(`Horários: ${values.schedule}`);
+          if (values.frequency) medParts.push(`Frequência: ${values.frequency}`);
+          if (values.status) {
+              const statusLabel =
+                  values.status === 'continuo'
+                      ? 'Contínuo'
+                      : values.status === 'sos'
+                      ? 'SOS'
+                      : values.status === 'interrompido'
+                      ? 'Interrompido'
+                      : values.status;
+              medParts.push(`Status: ${statusLabel}`);
+          }
+          const actionLabel = editingMedication ? 'Medicação atualizada' : 'Medicação adicionada';
+          const evolutionReport = medParts.length
+              ? `${actionLabel}: ${medParts.join(' | ')}`
+              : actionLabel;
+
+          await api.post(`/children/${childId}/evolutions`, {
+              service_type: 'Medicação',
+              evolution_report: evolutionReport,
+              intermittences: null,
+              protocol_scores: null,
+              child_id: parseInt(childId, 10),
+              professional_id: professionalId
           });
-          message.success("Medicação adicionada!");
+
           setIsMedModalOpen(false);
           formMed.resetFields();
           fetchData(); 
       } catch (e) {
-           // Error
       }
   };
 
@@ -223,18 +308,33 @@ function ChildDashboard({ params }) {
                 <Card 
                     title="Medicação Ativa" 
                     style={{ marginTop: 25 }}
-                    extra={<Button size="small" onClick={() => setIsMedModalOpen(true)}>+</Button>}
+                    extra={
+                      <Button size="small" type="primary" onClick={openAddMedicationModal}>
+                        Adicionar medicação
+                      </Button>
+                    }
                 >
                     <List
                         itemLayout="horizontal"
                         dataSource={medications}
                         locale={{ emptyText: 'Nenhuma medicação registrada' }}
                         renderItem={item => (
-                            <List.Item>
+                            <List.Item
+                                actions={[
+                                  <Button
+                                    key="edit"
+                                    size="small"
+                                    type="link"
+                                    onClick={() => openEditMedicationModal(item)}
+                                  >
+                                    Editar
+                                  </Button>
+                                ]}
+                            >
                                 <List.Item.Meta
                                     avatar={<Avatar style={{ backgroundColor: '#87d068' }} icon={<FeatherIcon icon="activity" size={12} />} />}
                                     title={item.med_name}
-                                    description={`${item.dosage || ''} - ${item.schedule || ''}`}
+                                    description={`${item.dosage || ''} ${item.schedule ? `- ${item.schedule}` : ''} ${item.frequency ? `(${item.frequency})` : ''}`}
                                 />
                                 <Tag>{item.status}</Tag>
                             </List.Item>
@@ -378,6 +478,15 @@ function ChildDashboard({ params }) {
                         <Option value="Médico">Médico</Option>
                     </Select>
                 </Form.Item>
+                <Form.Item name="weight" label="Peso atual (kg)">
+                    <Input type="number" />
+                </Form.Item>
+                <Form.Item name="height" label="Altura atual (cm)">
+                    <Input type="number" />
+                </Form.Item>
+                <Form.Item name="cephalic_perimeter" label="Perímetro Cefálico (cm)">
+                    <Input type="number" />
+                </Form.Item>
                 <Form.Item name="evolution_report" label="Relato da Evolução" rules={[{ required: true }]}>
                     <TextArea rows={4} />
                 </Form.Item>
@@ -390,11 +499,11 @@ function ChildDashboard({ params }) {
             </Form>
         </Modal>
 
-        {/* Modal: Add Medication */}
+        {/* Modal: Add/Edit Medication */}
         <Modal 
-            title="Adicionar Medicação" 
+            title={editingMedication ? "Editar Medicação" : "Adicionar Medicação"} 
             open={isMedModalOpen} 
-            onOk={handleAddMedication} 
+            onOk={handleSaveMedication} 
             onCancel={() => setIsMedModalOpen(false)}
         >
             <Form form={formMed} layout="vertical">
@@ -407,8 +516,11 @@ function ChildDashboard({ params }) {
                 <Form.Item name="schedule" label="Horários">
                     <Input placeholder="Ex: 8h, 16h, 22h" />
                 </Form.Item>
-                <Form.Item name="status" label="Status">
-                    <Select defaultValue="continuo">
+                <Form.Item name="frequency" label="Frequência">
+                    <Input placeholder="Ex: 1x ao dia" />
+                </Form.Item>
+                <Form.Item name="status" label="Status" initialValue="continuo">
+                    <Select>
                         <Option value="continuo">Contínuo</Option>
                         <Option value="sos">SOS (Se necessário)</Option>
                         <Option value="interrompido">Interrompido</Option>

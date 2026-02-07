@@ -184,6 +184,13 @@ class ChildMedicationBase(BaseModel):
 class ChildMedicationCreate(ChildMedicationBase):
     pass
 
+class ChildMedicationUpdate(BaseModel):
+    med_name: str | None = None
+    dosage: str | None = None
+    schedule: str | None = None
+    frequency: str | None = None
+    status: str | None = None
+
 class ChildMedication(ChildMedicationBase):
     id: int
     created_at: datetime
@@ -626,6 +633,18 @@ def add_medication(child_id: int, med: ChildMedicationCreate, db: Session = Depe
 @app.get("/children/{child_id}/medications", response_model=List[ChildMedication])
 def get_medications(child_id: int, db: Session = Depends(get_db)):
     return db.query(models.ChildMedication).filter(models.ChildMedication.child_id == child_id).all()
+
+@app.put("/medications/{med_id}", response_model=ChildMedication)
+def update_medication(med_id: int, med_update: ChildMedicationUpdate, db: Session = Depends(get_db)):
+    med = db.query(models.ChildMedication).filter(models.ChildMedication.id == med_id).first()
+    if not med:
+        raise HTTPException(status_code=404, detail="Medicação não encontrada")
+    update_data = med_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(med, key, value)
+    db.commit()
+    db.refresh(med)
+    return med
 
 @app.delete("/medications/{med_id}", status_code=204)
 def delete_medication(med_id: int, db: Session = Depends(get_db)):

@@ -158,9 +158,11 @@ function QueuePage() {
                     </Form.Item>
                     <Form.Item name="professional_id" label="Profissional">
                         <Select allowClear>
-                            {professionals.map(p => (
-                                <Option key={p.id} value={p.id}>{p.name} ({p.role})</Option>
-                            ))}
+                            {professionals
+                                .filter(p => p.role === 'health')
+                                .map(p => (
+                                    <Option key={p.id} value={p.id}>{p.name}</Option>
+                                ))}
                         </Select>
                     </Form.Item>
                     <Form.Item name="wallet_id" label="Carteira / Recurso">

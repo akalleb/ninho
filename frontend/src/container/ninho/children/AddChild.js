@@ -186,8 +186,35 @@ function AddChild() {
                 <Card type="inner" title="Dados Clínicos" style={{ marginTop: 20 }}>
                     <Row gutter={25}>
                         <Col xs={24} md={8}>
-                            <Form.Item name="diagnosis" label="Diagnóstico (CID)">
-                                <Input placeholder="Ex: F84.0" />
+                            <Form.Item
+                              shouldUpdate={(prev, cur) =>
+                                prev.is_diagnosis_closed !== cur.is_diagnosis_closed
+                              }
+                              noStyle
+                            >
+                              {({ getFieldValue }) => (
+                                <Form.Item
+                                  name="diagnosis"
+                                  label="Diagnóstico (CID)"
+                                  rules={
+                                    getFieldValue('is_diagnosis_closed')
+                                      ? [{ required: true, message: 'Informe o CID quando o diagnóstico estiver fechado' }]
+                                      : []
+                                  }
+                                >
+                                  <Input
+                                    placeholder="Ex: F84.0"
+                                    disabled={!getFieldValue('is_diagnosis_closed')}
+                                  />
+                                </Form.Item>
+                              )}
+                            </Form.Item>
+                            <Form.Item
+                              name="is_diagnosis_closed"
+                              label="Diagnóstico fechado?"
+                              valuePropName="checked"
+                            >
+                                <Switch checkedChildren="Sim" unCheckedChildren="Em investigação" />
                             </Form.Item>
                         </Col>
                         <Col xs={24} md={8}>
@@ -199,7 +226,7 @@ function AddChild() {
                                 </Select>
                             </Form.Item>
                         </Col>
-                        <Col xs={24} md={6}>
+                        <Col xs={24} md={8}>
                             <Form.Item name="blood_type" label="Tipo Sanguíneo">
                                 <Select>
                                     <Option value="A+">A+</Option>
@@ -324,11 +351,6 @@ function AddChild() {
                         <Col xs={24} md={12}>
                              <Form.Item name="difficulty_reason" label="Motivo da Dificuldade (se não tiver acesso)">
                                 <Input />
-                            </Form.Item>
-                        </Col>
-                        <Col xs={24} md={6}>
-                            <Form.Item name="is_diagnosis_closed" label="Diagnóstico fechado?" valuePropName="checked">
-                                <Switch checkedChildren="Sim" unCheckedChildren="Em investigação" />
                             </Form.Item>
                         </Col>
                      </Row>

@@ -107,8 +107,8 @@ function MenuItems({ darkMode, toggleCollapsed, topMenu, events }) {
         </NextNavLink>
       </Menu.Item>
 
-      {/* Visível para Admin e Saúde */}
-      {(userRole === 'admin' || userRole === 'health') && (
+      {/* Fila de Espera - visível para Admin e Operacional */}
+      {(userRole === 'admin' || userRole === 'operational') && (
         <Menu.Item key="queue" icon={!topMenu && <FeatherIcon icon="list" />}>
           <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/queue`} activeClassName="">
             Fila de Espera

@@ -81,19 +81,27 @@ function QueuePage() {
             };
             
             if (editingItem) {
-                // Update
                 await api.put(`/attendances/${editingItem.id}`, payload);
                 message.success('Agendamento atualizado com sucesso!');
             } else {
-                // Create
                 await api.post('/attendances/', payload);
+                if (values.weight || values.height) {
+                    const childRes = await api.get(`/children/${values.child_id}`);
+                    const child = childRes.data;
+                    const updatedChild = {
+                        ...child,
+                        weight: values.weight != null ? values.weight : child.weight,
+                        height: values.height != null ? values.height : child.height
+                    };
+                    await api.put(`/children/${values.child_id}`, updatedChild);
+                }
                 message.success('Agendamento realizado com sucesso!');
             }
             
             setIsModalVisible(false);
             setEditingItem(null);
             form.resetFields();
-            fetchData(); // Refresh
+            fetchData(); 
         } catch (error) {
             console.error(error);
             message.error('Erro ao salvar.');
@@ -233,9 +241,11 @@ function QueuePage() {
                     </Form.Item>
                     <Form.Item name="professional_id" label="Profissional">
                         <Select allowClear>
-                            {professionals.map(p => (
-                                <Option key={p.id} value={p.id}>{p.name} ({p.role})</Option>
-                            ))}
+                            {professionals
+                                .filter(p => p.role === 'health')
+                                .map(p => (
+                                    <Option key={p.id} value={p.id}>{p.name}</Option>
+                                ))}
                         </Select>
                     </Form.Item>
                     <Form.Item name="wallet_id" label="Carteira / Recurso">
@@ -248,6 +258,16 @@ function QueuePage() {
                     <Form.Item name="scheduled_time" label="Data e Hora (Deixe vazio para fila de espera imediata)">
                         <DatePicker showTime format="DD/MM/YYYY HH:mm" style={{ width: '100%' }} />
                     </Form.Item>
+                    {!editingItem && (
+                        <>
+                            <Form.Item name="weight" label="Peso atual (kg)">
+                                <Input type="number" />
+                            </Form.Item>
+                            <Form.Item name="height" label="Altura atual (cm)">
+                                <Input type="number" />
+                            </Form.Item>
+                        </>
+                    )}
                     {editingItem && (
                          <Form.Item name="status" label="Status">
                             <Select>
