@@ -13,7 +13,7 @@ const DashboardLoading = () => (
 );
 
 // Ninho Components
-const NinhoPlayground = dynamic(() => import('../../../../src/container/ninho/Playground'), { 
+const DashboardOverview = dynamic(() => import('../../../../src/container/dashboard/DashboardOverview'), { 
   ssr: false,
   loading: () => <DashboardLoading />,
 });
@@ -47,7 +47,7 @@ function DashboardRoutesPage() {
   }
 
   // Default route
-  return <NinhoPlayground />;
+  return <DashboardOverview />;
 }
 
 export default withAdminLayoutNext(DashboardRoutesPage);

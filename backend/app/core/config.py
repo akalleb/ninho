@@ -1,0 +1,34 @@
+"""
+Application Configuration
+"""
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Database
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./sql_app.db")
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+# JWT
+SECRET_KEY = os.getenv("SECRET_KEY", "ninho-secret-key-change-in-production-2026")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
+
+# CORS
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://localhost:8000",
+    "*"  # Temporary for dev, consider removing in production
+]
+
+# Add production origins from env
+PROD_ORIGINS = os.getenv("CORS_ORIGINS", "")
+if PROD_ORIGINS:
+    ALLOWED_ORIGINS.extend([o.strip() for o in PROD_ORIGINS.split(",") if o.strip()])
+
+# Media
+MEDIA_ROOT = os.path.join(os.path.dirname(os.path.dirname(__file__)), "media")

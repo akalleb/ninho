@@ -86,11 +86,19 @@ class Professional(Base):
     status = Column(String, default="active")
     password_hash = Column(String, nullable=True)
     avatar_url = Column(String, nullable=True)
+    cover_url = Column(String, nullable=True)
     
     # Health Professional Specifics
     specialty = Column(String, nullable=True) 
     registry_number = Column(String, nullable=True) # CRM, CRP, etc.
     cbo = Column(String, nullable=True) # CBO
+    
+    # Profile Extensions
+    bio = Column(Text, nullable=True)
+    phone = Column(String, nullable=True)
+    website = Column(String, nullable=True)
+    social_media = Column(Text, nullable=True) # JSON stored as string: { "facebook": "...", "linkedin": "..." }
+    skills = Column(Text, nullable=True) # Comma separated or JSON
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
@@ -267,8 +275,10 @@ class Wallet(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     last_updated = Column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
     created_by_id = Column(Integer, ForeignKey("professionals.id"), nullable=True)
+    target_professional_id = Column(Integer, ForeignKey("professionals.id"), nullable=True)
     
-    created_by = relationship("Professional")
+    created_by = relationship("Professional", foreign_keys=[created_by_id])
+    target_professional = relationship("Professional", foreign_keys=[target_professional_id])
     resource_sources = relationship("ResourceSource", back_populates="wallet")
 
 # Add Relationship to ResourceSource
@@ -395,3 +405,29 @@ class Family(Base):
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
+
+class NotificationType(str, enum.Enum):
+    INFO = "info"
+    WARNING = "warning"
+    ERROR = "error"
+    SUCCESS = "success"
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    message = Column(Text, nullable=False)
+    type = Column(String, default=NotificationType.INFO)
+    
+    is_active = Column(Boolean, default=True)
+    expires_at = Column(DateTime(timezone=True), nullable=True)
+    
+    target_audience = Column(String, default="all") # all, health, admin, operational
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_by_id = Column(Integer, ForeignKey("professionals.id"), nullable=True)
+    target_professional_id = Column(Integer, ForeignKey("professionals.id"), nullable=True)
+    
+    created_by = relationship("Professional", foreign_keys=[created_by_id])
+    target_professional = relationship("Professional", foreign_keys=[target_professional_id])

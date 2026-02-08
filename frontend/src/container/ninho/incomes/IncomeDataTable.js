@@ -1,12 +1,35 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Table, Button, App, Select, DatePicker, Tag, Modal, Form, Input, Upload, Tooltip, Badge, Tabs, Skeleton } from 'antd';
+import { Row, Col, Table, Button, App, Select, DatePicker, Tag, Modal, Form, Input, Upload, Tooltip, Badge, Tabs, Skeleton, Statistic } from 'antd';
 import FeatherIcon from 'feather-icons-react';
 import { useRouter } from 'next/navigation';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip as ChartTooltip,
+  Legend,
+  Filler
+} from 'chart.js';
+import { Line } from 'react-chartjs-2';
 import { PageHeader } from '../../../components/page-headers/page-headers';
 import { Main } from '../../styled';
 import { Cards } from '../../../components/cards/frame/cards-frame';
 import api from '../../../config/api/axios';
 import dayjs from 'dayjs';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  ChartTooltip,
+  Legend,
+  Filler
+);
 
 const { Option } = Select;
 const { RangePicker } = DatePicker;
@@ -17,6 +40,12 @@ function IncomeDataTable() {
   const [sources, setSources] = useState([]);
   const [wallets, setWallets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalReceived: 0,
+    totalPending: 0,
+    monthlyTrend: { labels: [], data: [] }
+  });
+
   const router = useRouter();
   const { notification } = App.useApp();
   
@@ -30,6 +59,36 @@ function IncomeDataTable() {
   const [isReconcileModalOpen, setIsReconcileModalOpen] = useState(false);
   const [currentReconcileId, setCurrentReconcileId] = useState(null);
   const [reconcileForm] = Form.useForm();
+
+  const processStats = (data) => {
+    let received = 0;
+    let pending = 0;
+    const trendMap = {};
+
+    data.forEach(item => {
+      const amount = item.amount || 0;
+      if (['recebido', 'conciliado'].includes(item.status)) {
+        received += amount;
+      } else if (item.status === 'pendente') {
+        pending += amount;
+      }
+
+      // Trend by month
+      if (item.received_at) {
+        const monthKey = dayjs(item.received_at).format('YYYY-MM');
+        trendMap[monthKey] = (trendMap[monthKey] || 0) + amount;
+      }
+    });
+
+    const labels = Object.keys(trendMap).sort().map(k => dayjs(k).format('MMM/YY'));
+    const trendData = Object.keys(trendMap).sort().map(k => trendMap[k]);
+
+    setStats({
+      totalReceived: received,
+      totalPending: pending,
+      monthlyTrend: { labels, data: trendData }
+    });
+  };
 
   const fetchFilters = async () => {
     try {
@@ -74,6 +133,7 @@ function IncomeDataTable() {
       }
 
       setIncomes(enrichedData);
+      processStats(enrichedData);
     } catch (error) {
       notification.error({
         message: 'Erro ao carregar receitas',
@@ -96,6 +156,20 @@ function IncomeDataTable() {
         fetchIncomes(); 
     }
   }, [filterSource, filterWallet, dateRange, sources, wallets, activeTab]);
+
+  const chartData = {
+    labels: stats.monthlyTrend.labels,
+    datasets: [
+      {
+        label: 'Evolução de Receitas',
+        data: stats.monthlyTrend.data,
+        borderColor: '#20C997',
+        backgroundColor: 'rgba(32, 201, 151, 0.2)',
+        tension: 0.4,
+        fill: true
+      },
+    ],
+  };
 
   const handleReconcile = (record) => {
       setCurrentReconcileId(record.id);
@@ -210,6 +284,49 @@ function IncomeDataTable() {
         ]}
       />
       <Main>
+        <Row gutter={25} style={{ marginBottom: 25 }}>
+          <Col md={8} xs={24}>
+            <Cards headless>
+              <div style={{ padding: '20px', textAlign: 'center' }}>
+                <Statistic 
+                  title="Total Recebido (Efetivado)" 
+                  value={stats.totalReceived} 
+                  precision={2}
+                  prefix="R$ "
+                  valueStyle={{ fontSize: 24, fontWeight: 'bold', color: '#20C997' }} 
+                />
+              </div>
+            </Cards>
+          </Col>
+          <Col md={8} xs={24}>
+            <Cards headless>
+               <div style={{ padding: '20px', textAlign: 'center' }}>
+                  <Statistic 
+                    title="Pendente / A Receber" 
+                    value={stats.totalPending} 
+                    precision={2} 
+                    prefix="R$ "
+                    valueStyle={{ fontSize: 24, fontWeight: 'bold', color: '#FA8B0C' }} 
+                  />
+               </div>
+            </Cards>
+          </Col>
+          <Col md={8} xs={24}>
+            <Cards headless title="Evolução Mensal">
+              <div style={{ height: 150, width: '100%' }}>
+                <Line 
+                  data={chartData} 
+                  options={{ 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: { display: false } },
+                    scales: { x: { display: false }, y: { display: false } }
+                  }} 
+                />
+              </div>
+            </Cards>
+          </Col>
+        </Row>
+
         <Row gutter={25}>
           <Col xs={24}>
             <Cards>

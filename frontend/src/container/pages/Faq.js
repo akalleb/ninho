@@ -176,7 +176,6 @@ function Faq() {
             <FaqWrapper>
               <Cards headless title="Using Applications">
                 <Collapse
-                  bordered={false}
                   defaultActiveKey={['1']}
                   expandIcon={({ isActive }) => <FeatherIcon icon={isActive ? 'minus' : 'plus'} size={14} />}
                   items={faqItems}

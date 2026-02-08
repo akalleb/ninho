@@ -46,7 +46,7 @@ function MenuItems({ darkMode, toggleCollapsed, topMenu, events }) {
 
   // LÓGICA DE SELEÇÃO DINÂMICA
   const getSelectedKey = () => {
-    if (pathName.includes('users/dataTable') || pathName.includes('users/add-user')) return ['users'];
+    if (pathName.includes('users/dataTable') || pathName.includes('users/add-user') || pathName.includes('dataTable')) return ['users'];
     if (pathName.includes('resource-sources')) return ['resource-sources'];
     if (pathName.includes('wallets')) return ['wallets'];
     if (pathName.includes('incomes')) return ['incomes'];
@@ -152,8 +152,13 @@ function MenuItems({ darkMode, toggleCollapsed, topMenu, events }) {
       {userRole === 'admin' && (
         <SubMenu key="admin" icon={!topMenu && <FeatherIcon icon="settings" />} title="Administração">
           <Menu.Item key="users">
-            <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/users/dataTable`} activeClassName="">
+            <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/dataTable`} activeClassName="">
               Colaboradores
+            </NextNavLink>
+          </Menu.Item>
+          <Menu.Item key="notifications">
+            <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/notifications`} activeClassName="">
+              Notificações
             </NextNavLink>
           </Menu.Item>
           <Menu.Item key="reports">

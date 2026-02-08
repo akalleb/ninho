@@ -1,29 +1,24 @@
 import React from 'react';
-import { Upload, App } from 'antd';
-import FeatherIcon from 'feather-icons-react';
 import propTypes from 'prop-types';
 import { getImageUrl } from '../../../utility/getImageUrl';
+import { useSelector } from 'react-redux';
 
 function CoverSection() {
-  const { message } = App.useApp();
+  const { cover_url } = useSelector(state => state.auth.login || {});
+  
+  const cover = cover_url ? getImageUrl(cover_url) : getImageUrl('static/img/profile/cover-img.png');
 
   return (
     <div className="cover-image">
       <img
-        src={getImageUrl('static/img/profile/cover-img.png')}
+        src={cover}
         alt="Capa do perfil"
-      />
-      <Upload
-        showUploadList={false}
-        beforeUpload={() => {
-          message.info('Alterar capa ainda não está disponível.');
-          return false;
+        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = getImageUrl('static/img/profile/cover-img.png');
         }}
-      >
-        <a href="#" className="cursor-pointer">
-          <FeatherIcon icon="camera" size={16} /> Alterar capa
-        </a>
-      </Upload>
+      />
     </div>
   );
 }

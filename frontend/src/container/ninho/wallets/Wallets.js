@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Button, Modal, App, Tag, Card, Statistic, Empty, Skeleton, Popconfirm } from 'antd';
+import { Row, Col, Table, Button, Modal, App, Form, Input, Select, Tag, Popconfirm, Statistic, Skeleton, Empty } from 'antd';
 import FeatherIcon from 'feather-icons-react';
 import { useRouter } from 'next/navigation';
 import { Main } from '../../styled';
@@ -36,18 +36,56 @@ function Wallets() {
     router.push(`/admin/wallets/edit?id=${id}`);
   };
 
-  const handleDelete = async (id) => {
+  const handleExport = async (id) => {
     try {
-      await api.delete(`/wallets/${id}`);
+      const response = await api.get(`/wallets/${id}/export`);
+      
+      const jsonString = `data:text/json;chatset=utf-8,${encodeURIComponent(
+        JSON.stringify(response.data, null, 2)
+      )}`;
+      const link = document.createElement("a");
+      link.href = jsonString;
+      link.download = `carteira_${id}_export.json`;
+      link.click();
+      
+      return true;
+    } catch (error) {
+      notification.error({ message: 'Erro ao exportar dados da carteira' });
+      return false;
+    }
+  };
+
+  const handleDelete = async (id, force = false) => {
+    try {
+      const url = force ? `/wallets/${id}?force=true` : `/wallets/${id}`;
+      await api.delete(url);
+      
       notification.success({
         message: 'Carteira excluída com sucesso',
       });
       fetchWallets();
     } catch (error) {
-      notification.error({
-        message: 'Erro ao excluir carteira',
-        description: error.message,
-      });
+      if (error.response && error.response.status === 400 && !force) {
+        Modal.confirm({
+          title: 'Atenção: Carteira em uso',
+          content: 'Esta carteira possui receitas ou despesas vinculadas. Para excluir, é necessário apagar todos os registros associados. Recomendamos exportar os dados antes.',
+          okText: 'Exportar Dados e Excluir',
+          okType: 'danger',
+          cancelText: 'Cancelar',
+          width: 500,
+          onOk: async () => {
+            const exportSuccess = await handleExport(id);
+            if (exportSuccess) {
+                setTimeout(() => handleDelete(id, true), 1000);
+            }
+          },
+        });
+      } else {
+        notification.error({
+          message: 'Erro ao excluir carteira',
+          description: error.response?.data?.detail || error.message,
+        });
+      }
     }
   };
 

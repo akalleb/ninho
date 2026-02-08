@@ -25,14 +25,28 @@ def migrate():
                 else:
                     print(f" -> Error adding '{col_name}': {e}")
 
-        # Update defaults
-        try:
-            print("Updating default values...")
-            connection.execute(text("UPDATE families SET assistance_status = 'active' WHERE assistance_status IS NULL"))
-            connection.execute(text("UPDATE families SET nationality = 'Brasileira' WHERE nationality IS NULL"))
-            print(" -> Defaults updated.")
-        except Exception as e:
-            print(f" -> Error updating defaults: {e}")
+        # Migration for Professional Profile
+        print("Migrating 'professionals' table...")
+        prof_columns = [
+            ("cover_url", "VARCHAR"),
+            ("bio", "TEXT"),
+            ("phone", "VARCHAR"),
+            ("website", "VARCHAR"),
+            ("social_media", "TEXT"),
+            ("skills", "TEXT")
+        ]
+
+        for col_name, col_type in prof_columns:
+            try:
+                print(f"Attempting to add '{col_name}' to professionals...")
+                connection.execute(text(f"ALTER TABLE professionals ADD COLUMN {col_name} {col_type}"))
+                print(f" -> Success: Added '{col_name}'")
+            except Exception as e:
+                if "already exists" in str(e) or "duplicate column" in str(e):
+                    print(f" -> Skipped: '{col_name}' already exists.")
+                else:
+                    print(f" -> Error adding '{col_name}': {e}")
+
 
 if __name__ == "__main__":
     migrate()

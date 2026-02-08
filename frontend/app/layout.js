@@ -9,8 +9,8 @@ import 'antd/dist/reset.css';
 import '../src/config/chart';
 
 export const metadata = {
-  title: 'StriKingDash',
-  description: 'StriKingDash Admin Dashboard',
+  title: 'Ninho Social',
+  description: 'Ninho Social - Plataforma de Gestão de Cuidados e Assistência',
 };
 
 export default function RootLayout({ children }) {

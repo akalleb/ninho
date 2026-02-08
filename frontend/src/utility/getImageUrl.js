@@ -6,6 +6,21 @@ import { getBasePath } from './getBasePath';
  * @returns {string} Full image URL with base path
  */
 export function getImageUrl(imgPath) {
+  if (!imgPath) return '';
+
+  // Se for uma URL completa, retorna ela mesma
+  if (imgPath.startsWith('http://') || imgPath.startsWith('https://')) {
+    return imgPath;
+  }
+
+  // Se for um caminho de media do backend (/media/...), adiciona o host da API
+  if (imgPath.startsWith('/media/')) {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    // Remove trailing slash from API URL if present
+    const cleanApiUrl = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
+    return `${cleanApiUrl}${imgPath}`;
+  }
+
   // Remove leading slash if present
   const cleanPath = imgPath.startsWith('/') ? imgPath.slice(1) : imgPath;
   

@@ -7,6 +7,7 @@ import { InfoWraper, UserDropDwon } from './auth-info-style';
 import { Popover } from '../../popup/popup';
 import { logOut, login } from '../../../redux/authentication/actionCreator';
 import Heading from '../../heading/heading';
+import NotificationBox from './notification';
 
 function AuthInfo() {
   const dispatch = useDispatch();
@@ -142,6 +143,7 @@ function AuthInfo() {
 
   return (
     <InfoWraper>
+      <NotificationBox />
       <div className="nav-author">
         <Popover placement="bottomRight" content={userContent} action="click">
           <span className="head-example" style={{ cursor: 'pointer', display: 'inline-block' }}>

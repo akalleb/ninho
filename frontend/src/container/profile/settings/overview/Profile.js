@@ -72,6 +72,10 @@ function Profile() {
             function_role: authUser.function_role,
             role: roleLabel,
             employment_type: 'Efetivo',
+            bio: authUser.bio,
+            phone: authUser.phone,
+            website: authUser.website,
+            skills: authUser.skills,
           });
         } else {
           notification.error({
@@ -101,6 +105,10 @@ function Profile() {
         ...professional,
         name: values.name,
         function_role: values.function_role,
+        bio: values.bio,
+        phone: values.phone,
+        website: values.website,
+        skills: values.skills,
       };
 
       await api.put(`/professionals/${professional.id}`, updated);
@@ -117,6 +125,10 @@ function Profile() {
         email: updated.email,
         role: updated.role,
         status: updated.status || currentAuthUser.status || 'active',
+        bio: updated.bio,
+        phone: updated.phone,
+        website: updated.website,
+        skills: updated.skills,
       };
 
       await dispatch(login(authUser));
@@ -154,6 +166,24 @@ function Profile() {
               >
                 <Input />
               </Form.Item>
+              <Form.Item name="bio" label="Biografia">
+                <Input.TextArea rows={3} placeholder="Conte um pouco sobre você..." />
+              </Form.Item>
+              <Form.Item name="skills" label="Especialidades">
+                <Input placeholder="Separe por vírgulas (Ex: Fisioterapia, Pediatria)" />
+              </Form.Item>
+              <Row gutter={16}>
+                <Col span={12}>
+                    <Form.Item name="phone" label="Telefone/WhatsApp">
+                        <Input placeholder="(99) 99999-9999" />
+                    </Form.Item>
+                </Col>
+                <Col span={12}>
+                    <Form.Item name="website" label="Site/LinkedIn">
+                        <Input placeholder="https://..." />
+                    </Form.Item>
+                </Col>
+              </Row>
               <Form.Item name="email" label="E-mail">
                 <Input disabled />
               </Form.Item>

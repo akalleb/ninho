@@ -1,10 +1,11 @@
 from fastapi import FastAPI, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func, text
+from sqlalchemy import func, text, or_
+from sqlalchemy.exc import IntegrityError
 from typing import List, Optional
 from . import models, database
-from pydantic import BaseModel, EmailStr
-from datetime import datetime, date
+from pydantic import BaseModel, EmailStr, computed_field
+from datetime import datetime, date, timedelta
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
@@ -22,16 +23,18 @@ app = FastAPI(title="Sistema Ninho API")
 origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "http://localhost:5173", # Vite default
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
     "http://localhost:8000",
+    "http://127.0.0.1:8000",
     "*"
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"], # For development, allow all origins explicitly to avoid issues
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
 )
 
@@ -121,6 +124,7 @@ class Family(FamilyBase):
     updated_at: datetime | None = None
     
     # Computed fields (helper properties)
+    @computed_field
     @property
     def per_capita_income(self) -> float:
         total_members = 1 + (self.dependents_count or 0)
@@ -219,7 +223,8 @@ class Evolution(EvolutionBase):
     # professional: Optional[Professional] = None # Include professional details
     # Commented out to avoid circular dependency or missing definition. 
     # If needed, we must ensure Professional schema is defined BEFORE Evolution or use update_forward_refs()
-    
+    child: Optional[Child] = None
+
     class Config:
         from_attributes = True
 
@@ -244,6 +249,14 @@ class ProfessionalBase(BaseModel):
     cbo: str | None = None
     status: str | None = "active"
     avatar_url: str | None = None
+    cover_url: str | None = None
+    
+    # Profile Extensions
+    bio: str | None = None
+    phone: str | None = None
+    website: str | None = None
+    social_media: str | None = None
+    skills: str | None = None
 
 class ProfessionalCreate(ProfessionalBase):
     password: str
@@ -269,6 +282,7 @@ class AuthUser(BaseModel):
     role: str
     status: str
     avatar_url: str | None
+    cover_url: str | None = None
 
 class ProfessionalStatusUpdate(BaseModel):
     status: str
@@ -450,6 +464,10 @@ def create_family(family: FamilyCreate, db: Session = Depends(get_db)):
     db.refresh(db_family)
     return db_family
 
+@app.get("/families/count")
+def count_families(db: Session = Depends(get_db)):
+    return {"count": db.query(models.Family).count()}
+
 @app.get("/families/", response_model=List[Family])
 def read_families(
     neighborhood: Optional[str] = None,
@@ -497,12 +515,49 @@ def update_family(family_id: str, family_update: FamilyUpdate, db: Session = Dep
     return db_family
 
 @app.delete("/families/{family_id}", status_code=204)
-def delete_family(family_id: str, db: Session = Depends(get_db)):
+def delete_family(
+    family_id: str, 
+    force: bool = Query(False), # Novo parâmetro
+    db: Session = Depends(get_db)
+):
     db_family = db.query(models.Family).filter(models.Family.id == family_id).first()
     if not db_family:
         raise HTTPException(status_code=404, detail="Família não encontrada")
-    db.delete(db_family)
-    db.commit()
+    
+    try:
+        if force:
+            # 1. Buscar todas as crianças da família
+            children = db.query(models.Child).filter(models.Child.family_id == family_id).all()
+            
+            for child in children:
+                # 1.1 Excluir dependências da criança (Medicações)
+                db.query(models.ChildMedication).filter(models.ChildMedication.child_id == child.id).delete()
+                
+                # 1.2 Excluir dependências da criança (Evoluções)
+                db.query(models.MultidisciplinaryEvolution).filter(models.MultidisciplinaryEvolution.child_id == child.id).delete()
+
+                # 1.3 Excluir dependências da criança (Atendimentos)
+                # Atendimentos podem ter evoluções também, mas geralmente vinculadas à criança. 
+                # Se Attendance tiver filhos, precisa deletar também.
+                # Assumindo Attendance simples por enquanto ou cascade no banco.
+                db.query(models.Attendance).filter(models.Attendance.child_id == child.id).delete()
+
+                # 1.4 Excluir a criança
+                db.delete(child)
+            
+            # 2. Excluir a Família
+            db.delete(db_family)
+            db.commit()
+        else:
+            db.delete(db_family)
+            db.commit()
+            
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=400, 
+            detail="Não é possível excluir esta família pois existem registros dependentes. Use a exclusão forçada para remover tudo."
+        )
     return None
 
 @app.post("/families/{family_id}/docs")
@@ -541,6 +596,19 @@ async def upload_family_doc(
     return {"url": public_url, "type": doc_type}
 
 # --- Children Endpoints ---
+@app.get("/children/count")
+def count_children(db: Session = Depends(get_db)):
+    return {"count": db.query(models.Child).count()}
+
+@app.get("/children/summary_by_severity_level")
+def get_children_summary_by_severity(db: Session = Depends(get_db)):
+    results = db.query(
+        models.Child.severity_level, 
+        func.count(models.Child.id)
+    ).group_by(models.Child.severity_level).all()
+    
+    return [{"severity": row[0] or "Não informado", "count": row[1]} for row in results]
+
 @app.post("/children/", response_model=Child)
 def create_child(child: ChildCreate, db: Session = Depends(get_db)):
     db_child = models.Child(**child.model_dump())
@@ -653,11 +721,33 @@ def delete_medication(med_id: int, db: Session = Depends(get_db)):
     med = db.query(models.ChildMedication).filter(models.ChildMedication.id == med_id).first()
     if not med:
         raise HTTPException(status_code=404, detail="Medicação não encontrada")
-    db.delete(med)
-    db.commit()
+    try:
+        db.delete(med)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Erro de integridade ao excluir medicação.")
     return None
 
 # --- Multidisciplinary Evolution Endpoints ---
+@app.get("/evolutions/summary_by_service_type")
+def get_evolutions_summary_by_service(
+    months: int = 3,
+    db: Session = Depends(get_db)
+):
+    # Calculate start date
+    today = date.today()
+    start_date = today - timedelta(days=months*30)
+    
+    results = db.query(
+        models.MultidisciplinaryEvolution.service_type,
+        func.count(models.MultidisciplinaryEvolution.id)
+    ).filter(
+        models.MultidisciplinaryEvolution.date_service >= start_date
+    ).group_by(models.MultidisciplinaryEvolution.service_type).all()
+    
+    return [{"service": row[0], "count": row[1]} for row in results]
+
 @app.post("/children/{child_id}/evolutions", response_model=Evolution)
 def add_evolution(child_id: int, evo: EvolutionCreate, db: Session = Depends(get_db)):
     # Security Check: Attendance must be 'em_atendimento'
@@ -680,6 +770,28 @@ def get_evolutions(child_id: int, db: Session = Depends(get_db)):
         .filter(models.MultidisciplinaryEvolution.child_id == child_id)\
         .order_by(models.MultidisciplinaryEvolution.date_service.desc())\
         .all()
+
+@app.get("/evolutions/", response_model=List[Evolution])
+def list_all_evolutions(
+    professional_id: Optional[int] = None,
+    child_id: Optional[int] = None,
+    limit: int = 100,
+    sort: str = "created_at_desc",
+    db: Session = Depends(get_db)
+):
+    query = db.query(models.MultidisciplinaryEvolution).options(joinedload(models.MultidisciplinaryEvolution.child))
+    
+    if professional_id:
+        query = query.filter(models.MultidisciplinaryEvolution.professional_id == professional_id)
+    if child_id:
+        query = query.filter(models.MultidisciplinaryEvolution.child_id == child_id)
+        
+    if sort == "created_at_desc":
+        query = query.order_by(models.MultidisciplinaryEvolution.created_at.desc())
+    else:
+        query = query.order_by(models.MultidisciplinaryEvolution.date_service.desc())
+        
+    return query.limit(limit).all()
 
 # --- Professionals Endpoints ---
 @app.post("/professionals/", response_model=Professional)
@@ -777,6 +889,13 @@ def update_professional(
     db_professional.registry_number = professional.registry_number
     db_professional.cbo = professional.cbo
     db_professional.avatar_url = professional.avatar_url
+    
+    # Update new fields
+    db_professional.bio = professional.bio
+    db_professional.phone = professional.phone
+    db_professional.website = professional.website
+    db_professional.social_media = professional.social_media
+    db_professional.skills = professional.skills
 
     if professional.password:
         db_professional.password_hash = hash_password(professional.password)
@@ -870,8 +989,12 @@ def delete_professional(professional_id: int, db: Session = Depends(get_db)):
     professional = db.query(models.Professional).filter(models.Professional.id == professional_id).first()
     if professional is None:
         raise HTTPException(status_code=404, detail="Professional not found")
-    db.delete(professional)
-    db.commit()
+    try:
+        db.delete(professional)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Não é possível excluir este profissional pois existem atendimentos vinculados a ele.")
     return None
 
 
@@ -902,7 +1025,59 @@ async def upload_professional_avatar(
     db.refresh(professional)
     return professional
 
+
+@app.post("/professionals/{professional_id}/cover", response_model=Professional)
+async def upload_professional_cover(
+    professional_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    professional = (
+        db.query(models.Professional)
+        .filter(models.Professional.id == professional_id)
+        .first()
+    )
+    if professional is None:
+        raise HTTPException(status_code=404, detail="Professional not found")
+
+    COVERS_DIR = os.path.join(MEDIA_ROOT, "covers")
+    os.makedirs(COVERS_DIR, exist_ok=True)
+
+    filename = f"cover_{professional_id}_{int(time.time())}_{file.filename}"
+    file_path = os.path.join(COVERS_DIR, filename)
+
+    contents = await file.read()
+    with open(file_path, "wb") as f:
+        f.write(contents)
+
+    public_url = f"/media/covers/{filename}"
+    professional.cover_url = public_url
+    db.commit()
+    db.refresh(professional)
+    return professional
+
 # --- Attendance Endpoints ---
+@app.get("/attendances/", response_model=List[Attendance])
+def list_attendances(
+    status: Optional[str] = None,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    query = db.query(models.Attendance)
+    
+    if status:
+        query = query.filter(models.Attendance.status == status)
+    if start_date:
+        query = query.filter(func.date(models.Attendance.scheduled_time) >= start_date)
+    if end_date:
+        query = query.filter(func.date(models.Attendance.scheduled_time) <= end_date)
+        
+    # Default order by scheduled_time desc
+    return query.order_by(models.Attendance.scheduled_time.desc()).offset(skip).limit(limit).all()
+
 @app.post("/attendances/", response_model=Attendance)
 def create_attendance(attendance: AttendanceCreate, db: Session = Depends(get_db)):
     status = "agendado" if attendance.scheduled_time else "em_espera"
@@ -1045,8 +1220,12 @@ def delete_attendance(attendance_id: int, db: Session = Depends(get_db)):
     if not attendance:
         raise HTTPException(status_code=404, detail="Attendance not found")
     
-    db.delete(attendance)
-    db.commit()
+    try:
+        db.delete(attendance)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Não é possível excluir este atendimento pois existem evoluções vinculadas a ele.")
     return None
 
 # --- Dashboard & Reports Endpoints ---
@@ -1171,12 +1350,44 @@ def update_resource_source(source_id: int, source: ResourceSourceUpdate, db: Ses
     return db_source
 
 @app.delete("/resource-sources/{source_id}", status_code=204)
-def delete_resource_source(source_id: int, db: Session = Depends(get_db)):
+def delete_resource_source(
+    source_id: int, 
+    force: bool = Query(False), # Novo parâmetro para forçar deleção
+    db: Session = Depends(get_db)
+):
     db_source = db.query(models.ResourceSource).filter(models.ResourceSource.id == source_id).first()
     if not db_source:
         raise HTTPException(status_code=404, detail="Resource Source not found")
-    db.delete(db_source)
-    db.commit()
+    
+    try:
+        if force:
+            # 1. Desvincular Despesas (Manter registro, remover vínculo)
+            db.query(models.Expense).filter(models.Expense.source_id == source_id).update({models.Expense.source_id: None})
+            
+            # 2. Excluir Receitas (Cascade Delete) - E atualizar saldo da carteira se necessário
+            revenues = db.query(models.Revenue).filter(models.Revenue.source_id == source_id).all()
+            for rev in revenues:
+                if rev.status in ["recebido", "conciliado"]:
+                    wallet = db.query(models.Wallet).filter(models.Wallet.id == rev.wallet_id).first()
+                    if wallet:
+                        wallet.balance -= rev.amount # Estorna valor
+                        wallet.last_updated = func.now()
+                db.delete(rev)
+            
+            # 3. Excluir a Fonte
+            db.delete(db_source)
+            db.commit()
+        else:
+            # Comportamento padrão (seguro)
+            db.delete(db_source)
+            db.commit()
+            
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=400, 
+            detail="Esta fonte possui vínculos. Use a exclusão forçada para remover tudo."
+        )
     return None
 
 @app.post("/resource-sources/{source_id}/document")
@@ -1230,6 +1441,12 @@ def create_expense(expense: ExpenseCreate, db: Session = Depends(get_db)):
         wallet.balance -= expense.amount
         wallet.last_updated = func.now()
         
+        # 4.1 Update Resource Source Balance Used (if linked)
+        if expense.source_id:
+            source = db.query(models.ResourceSource).filter(models.ResourceSource.id == expense.source_id).first()
+            if source:
+                source.balance_used += expense.amount
+
     db.commit()
     db.refresh(db_expense)
     return db_expense
@@ -1324,13 +1541,89 @@ def update_wallet(wallet_id: int, wallet: WalletUpdate, db: Session = Depends(ge
     db.refresh(db_wallet)
     return db_wallet
 
+@app.get("/wallets/{wallet_id}/export")
+def export_wallet_data(wallet_id: int, db: Session = Depends(get_db)):
+    wallet = db.query(models.Wallet).filter(models.Wallet.id == wallet_id).first()
+    if not wallet:
+        raise HTTPException(status_code=404, detail="Carteira não encontrada")
+        
+    # Buscar dados relacionados
+    revenues = db.query(models.Revenue).filter(models.Revenue.wallet_id == wallet_id).all()
+    expenses = db.query(models.Expense).filter(models.Expense.wallet_id == wallet_id).all()
+    attendances = db.query(models.Attendance).filter(models.Attendance.wallet_id == wallet_id).all()
+    
+    # Retornar estrutura JSON completa
+    return {
+        "wallet": {
+            "id": wallet.id,
+            "name": wallet.name,
+            "balance": wallet.balance,
+            "category": wallet.category,
+            "is_restricted": wallet.is_restricted
+        },
+        "revenues": [
+            {
+                "id": r.id,
+                "date": r.received_at,
+                "amount": r.amount,
+                "description": r.description,
+                "status": r.status,
+                "source_id": r.source_id
+            } for r in revenues
+        ],
+        "expenses": [
+            {
+                "id": e.id,
+                "date": e.paid_at,
+                "amount": e.amount,
+                "destination": e.destination,
+                "description": e.description,
+                "status": e.status
+            } for e in expenses
+        ],
+        "attendances_linked": [
+            {
+                "id": a.id,
+                "date": a.scheduled_time,
+                "child_id": a.child_id
+            } for a in attendances
+        ]
+    }
+
 @app.delete("/wallets/{wallet_id}", status_code=204)
-def delete_wallet(wallet_id: int, db: Session = Depends(get_db)):
+def delete_wallet(
+    wallet_id: int, 
+    force: bool = Query(False),
+    db: Session = Depends(get_db)
+):
     db_wallet = db.query(models.Wallet).filter(models.Wallet.id == wallet_id).first()
     if not db_wallet:
         raise HTTPException(status_code=404, detail="Wallet not found")
-    db.delete(db_wallet)
-    db.commit()
+    
+    try:
+        if force:
+            # Lógica de Exclusão em Cascata
+            # 1. Excluir Receitas e Despesas (Dados financeiros deixam de existir sem a carteira)
+            db.query(models.Revenue).filter(models.Revenue.wallet_id == wallet_id).delete()
+            db.query(models.Expense).filter(models.Expense.wallet_id == wallet_id).delete()
+            
+            # 2. Desvincular Atendimentos e Fontes de Recurso (Não excluir, apenas remover vínculo)
+            db.query(models.Attendance).filter(models.Attendance.wallet_id == wallet_id).update({models.Attendance.wallet_id: None})
+            db.query(models.ResourceSource).filter(models.ResourceSource.wallet_id == wallet_id).update({models.ResourceSource.wallet_id: None})
+            
+            # 3. Excluir a Carteira
+            db.delete(db_wallet)
+            db.commit()
+        else:
+            db.delete(db_wallet)
+            db.commit()
+            
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=400, 
+            detail="Não é possível excluir esta carteira pois existem registros (receitas/despesas/transferências) vinculados a ela."
+        )
     return None
 
 @app.post("/wallets/transfer", status_code=201)
@@ -1505,6 +1798,19 @@ def read_revenues(
         
     return query.all()
 
+@app.get("/incomes/", response_model=List[Revenue])
+def list_incomes(
+    limit: int = 10,
+    order_by: str = "date_desc",
+    db: Session = Depends(get_db)
+):
+    query = db.query(models.Revenue)
+    
+    if order_by == "date_desc":
+        query = query.order_by(models.Revenue.received_at.desc())
+    
+    return query.limit(limit).all()
+
 @app.post("/revenues/{revenue_id}/receipt")
 async def upload_revenue_receipt(
     revenue_id: int,
@@ -1529,3 +1835,89 @@ async def upload_revenue_receipt(
     revenue.receipt_url = public_url
     db.commit()
     return {"url": public_url}
+
+# --- Notifications Endpoints ---
+
+class NotificationBase(BaseModel):
+    title: str
+    message: str
+    type: str = "info"
+    expires_at: datetime | None = None
+    target_audience: str = "all"
+    target_professional_id: int | None = None
+    is_active: bool = True
+
+class NotificationCreate(NotificationBase):
+    created_by_id: int | None = None
+
+class Notification(NotificationBase):
+    id: int
+    created_at: datetime
+    created_by_id: int | None = None
+    
+    class Config:
+        from_attributes = True
+
+@app.post("/notifications/", response_model=Notification)
+def create_notification(notification: NotificationCreate, db: Session = Depends(get_db)):
+    db_notification = models.Notification(**notification.model_dump())
+    db.add(db_notification)
+    db.commit()
+    db.refresh(db_notification)
+    return db_notification
+
+@app.get("/notifications/", response_model=List[Notification])
+def read_notifications(
+    active_only: bool = False,
+    target: Optional[str] = None,
+    professional_id: Optional[int] = None,
+    limit: int = 50,
+    db: Session = Depends(get_db)
+):
+    query = db.query(models.Notification)
+    
+    if active_only:
+        now = datetime.now()
+        query = query.filter(models.Notification.is_active == True)
+        # Filter expiration if set
+        query = query.filter((models.Notification.expires_at == None) | (models.Notification.expires_at > now))
+        
+    if target:
+        # Show notifications for 'all' OR specific target group OR specific professional
+        # If professional_id is provided, also include notifications for that ID
+        
+        conditions = [models.Notification.target_audience == "all", models.Notification.target_audience == target]
+        
+        if professional_id:
+             conditions.append(models.Notification.target_professional_id == professional_id)
+        
+        query = query.filter(or_(*conditions))
+    elif professional_id:
+        # If only professional_id is provided without target group filter, show 'all' + specific ID
+         query = query.filter(or_(
+             models.Notification.target_audience == "all",
+             models.Notification.target_professional_id == professional_id
+         ))
+        
+    return query.order_by(models.Notification.created_at.desc()).limit(limit).all()
+
+@app.put("/notifications/{notification_id}", response_model=Notification)
+def update_notification(notification_id: int, active: bool, db: Session = Depends(get_db)):
+    notification = db.query(models.Notification).filter(models.Notification.id == notification_id).first()
+    if not notification:
+        raise HTTPException(status_code=404, detail="Notification not found")
+        
+    notification.is_active = active
+    db.commit()
+    db.refresh(notification)
+    return notification
+
+@app.delete("/notifications/{notification_id}", status_code=204)
+def delete_notification(notification_id: int, db: Session = Depends(get_db)):
+    notification = db.query(models.Notification).filter(models.Notification.id == notification_id).first()
+    if not notification:
+        raise HTTPException(status_code=404, detail="Notification not found")
+        
+    db.delete(notification)
+    db.commit()
+    return None

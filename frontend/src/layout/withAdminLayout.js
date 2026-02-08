@@ -4,7 +4,6 @@ import { Layout, Button, Row, Col, Spin } from 'antd';
 import FeatherIcon from 'feather-icons-react';
 import FontAwesome from 'react-fontawesome';
 import { NextNavLink, NextLink } from '../components/utilities/NextLink';
-import { Scrollbars } from 'react-custom-scrollbars';
 import { ThemeProvider } from 'styled-components';
 import { connect } from 'react-redux';
 import propTypes from 'prop-types';
@@ -142,46 +141,6 @@ const ThemeLayout = (WrappedComponent) => {
         zIndex: 998,
       };
 
-      const renderView = ({ style, ...props }) => {
-        const customStyle = {
-          marginRight: 'auto',
-        };
-        return <div {...props} style={{ ...style, ...customStyle }} />;
-      };
-
-      const renderThumbVertical = ({ style, ...props }) => {
-        const { ChangeLayoutMode } = this.props;
-        const thumbStyle = {
-          borderRadius: 6,
-          backgroundColor: ChangeLayoutMode ? '#ffffff16' : '#F1F2F6',
-          [left]: '2px',
-        };
-        return <div style={{ ...style, ...thumbStyle }} {...props} />;
-      };
-
-      const renderTrackVertical = () => {
-        const thumbStyle = {
-          position: 'absolute',
-          width: '6px',
-          transition: 'opacity 200ms ease 0s',
-          opacity: 0,
-          [rtl ? 'left' : 'right']: '2px',
-          bottom: '2px',
-          top: '2px',
-          borderRadius: '3px',
-        };
-        return <div style={thumbStyle} />;
-      };
-
-      const renderThumbHorizontal = ({ style, ...props }) => {
-        const { ChangeLayoutMode } = this.props;
-        const thumbStyle = {
-          borderRadius: 6,
-          backgroundColor: ChangeLayoutMode ? '#ffffff16' : '#F1F2F6',
-        };
-        return <div style={{ ...style, ...thumbStyle }} {...props} />;
-      };
-
       const onRtlChange = () => {
         if (typeof window !== 'undefined') {
           const html = document.querySelector('html');
@@ -281,24 +240,6 @@ const ThemeLayout = (WrappedComponent) => {
                   {topMenu && windowWidth > 991 ? (
                     <TopMenuSearch>
                       <div className="top-right-wrap d-flex">
-                        <NextLink
-                          className={`${activeSearch ? 'search-toggle active' : 'search-toggle'}`}
-                          onClick={() => {
-                            toggleSearch();
-                          }}
-                          href="#"
-                        >
-                          <FeatherIcon icon="search" />
-                          <FeatherIcon icon="x" />
-                        </NextLink>
-                        <div className={`${activeSearch ? 'topMenu-search-form show' : 'topMenu-search-form'}`}>
-                          <form action="">
-                            <span className="search-icon">
-                              <FeatherIcon icon="search" />
-                            </span>
-                            <input type="text" name="search" />
-                          </form>
-                        </div>
                         <AuthInfo />
                       </div>
                     </TopMenuSearch>
@@ -337,38 +278,16 @@ const ThemeLayout = (WrappedComponent) => {
               {!topMenu || windowWidth <= 991 ? (
                 <ThemeProvider theme={darkTheme}>
                   <Sider width={280} style={SideBarStyle} collapsed={collapsed} theme={!darkMode ? 'light' : 'dark'}>
-                    {isClient ? (
-                      <Scrollbars
-                        className="custom-scrollbar"
-                        autoHide
-                        autoHideTimeout={500}
-                        autoHideDuration={200}
-                        renderThumbHorizontal={renderThumbHorizontal}
-                        renderThumbVertical={renderThumbVertical}
-                        renderView={renderView}
-                        renderTrackVertical={renderTrackVertical}
-                      >
-                        <p className="sidebar-nav-title">MAIN MENU</p>
-                        <MenueItems
-                          topMenu={topMenu}
-                          rtl={rtl}
-                          toggleCollapsed={toggleCollapsedMobile}
-                          darkMode={darkMode}
-                          events={onEventChange}
-                        />
-                      </Scrollbars>
-                    ) : (
-                      <div className="custom-scrollbar">
-                        <p className="sidebar-nav-title">MAIN MENU</p>
-                        <MenueItems
-                          topMenu={topMenu}
-                          rtl={rtl}
-                          toggleCollapsed={toggleCollapsedMobile}
-                          darkMode={darkMode}
-                          events={onEventChange}
-                        />
-                      </div>
-                    )}
+                    <div className="custom-scrollbar">
+                      <p className="sidebar-nav-title">MAIN MENU</p>
+                      <MenueItems
+                        topMenu={topMenu}
+                        rtl={rtl}
+                        toggleCollapsed={toggleCollapsedMobile}
+                        darkMode={darkMode}
+                        events={onEventChange}
+                      />
+                    </div>
                   </Sider>
                 </ThemeProvider>
               ) : null}

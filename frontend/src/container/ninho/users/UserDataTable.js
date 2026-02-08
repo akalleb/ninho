@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Table, Button, Modal, App } from 'antd';
+import { Row, Col, Table, Button, Modal, App, Tooltip } from 'antd';
 import FeatherIcon from 'feather-icons-react';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '../../../components/page-headers/page-headers';
@@ -167,6 +167,9 @@ function UserDataTable() {
         ghost
         title="Lista de Colaboradores"
         buttons={[
+          <Button key="2" type="default" size="small" onClick={() => router.push('/admin/notifications')}>
+             <FeatherIcon icon="bell" size={14} /> Gerenciar Notificações
+          </Button>,
           <Button key="1" type="primary" size="small" onClick={() => router.push('/admin/dashboard/users/add-user')}>
             <FeatherIcon icon="plus" size={14} /> Adicionar Novo Colaborador
           </Button>,

@@ -132,7 +132,7 @@ function AddChild() {
       <Main>
         <Cards
             title={isEditMode ? 'Editar Criança' : 'Nova Criança'}
-            extra={
+            isbutton={
                 <div style={{ display: 'flex', gap: 10 }}>
                     <Button key="back" onClick={() => router.push('/admin/children')}>Cancelar</Button>
                     <Button key="save" type="primary" onClick={handleSave} loading={loading}>Salvar</Button>

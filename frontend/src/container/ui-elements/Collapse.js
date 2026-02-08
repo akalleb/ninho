@@ -151,7 +151,6 @@ function Collapses() {
             <Cards title="Borderless">
               <Collapse 
                 defaultActiveKey={['1']} 
-                bordered={false}
                 items={[
                   {
                     key: '1',
@@ -173,7 +172,6 @@ function Collapses() {
             </Cards>
             <Cards title="Custom Panel">
               <Collapse
-                bordered={false}
                 defaultActiveKey={['1']}
                 expandIcon={({ isActive }) => <RightOutlined rotate={isActive ? 90 : 0} />}
                 items={[

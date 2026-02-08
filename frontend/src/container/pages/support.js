@@ -191,7 +191,6 @@ function Support() {
                   <Cards headless title="Frequently Asked Questions">
                     <FaqWrapper>
                       <Collapse
-                        bordered={false}
                         defaultActiveKey={['1']}
                         expandIcon={({ isActive }) => <FeatherIcon icon={isActive ? 'minus' : 'plus'} size={14} />}
                         items={faqItems}
