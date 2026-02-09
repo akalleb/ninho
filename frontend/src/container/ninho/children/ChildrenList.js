@@ -154,16 +154,93 @@ function ChildrenList() {
         title: 'Diagnóstico',
         dataIndex: 'diagnosis',
         key: 'diagnosis',
-        render: (text) => text || <Tag>Não informado</Tag>
+        render: (text) => {
+          if (text) {
+            return (
+              <span style={{ fontSize: 12, fontWeight: 500, color: '#262626' }}>
+                {text}
+              </span>
+            );
+          }
+          return (
+            <Tag
+              style={{
+                fontSize: 12,
+                fontWeight: 500,
+                borderRadius: 12,
+                padding: '2px 10px',
+                backgroundColor: '#f5f5f5',
+                color: '#595959',
+                border: '1px solid #d9d9d9',
+              }}
+            >
+              Não informado
+            </Tag>
+          );
+        }
     },
     {
         title: 'Nível',
         dataIndex: 'severity_level',
         key: 'severity_level',
         render: (text) => {
-            const colors = { leve: 'green', media: 'orange', grave: 'red' };
-            const labels = { leve: 'LEVE', media: 'MÉDIO', grave: 'GRAVE' };
-            return text ? <Tag color={colors[text] || 'default'}>{labels[text] || text.toUpperCase()}</Tag> : <Tag>Não informado</Tag>;
+          if (!text) {
+            return (
+              <Tag
+                style={{
+                  fontSize: 12,
+                  fontWeight: 500,
+                  borderRadius: 14,
+                  padding: '2px 10px',
+                  backgroundColor: '#fafafa',
+                  color: '#8c8c8c',
+                  border: '1px dashed #d9d9d9',
+                }}
+              >
+                Não informado
+              </Tag>
+            );
+          }
+
+          let label = text.toUpperCase();
+          let backgroundColor = '#f5f5f5';
+          let color = '#595959';
+          let borderColor = '#d9d9d9';
+
+          if (text === 'leve') {
+            label = 'Leve (Nível 1)';
+            backgroundColor = '#f6ffed';
+            color = '#135200';
+            borderColor = '#b7eb8f';
+          } else if (text === 'media') {
+            label = 'Moderado (Nível 2)';
+            backgroundColor = '#fff7e6';
+            color = '#ad4e00';
+            borderColor = '#ffd591';
+          } else if (text === 'grave') {
+            label = 'Grave (Nível 3)';
+            backgroundColor = '#fff1f0';
+            color = '#a8071a';
+            borderColor = '#ffa39e';
+          }
+
+          return (
+            <Tag
+              style={{
+                minWidth: 120,
+                textAlign: 'center',
+                fontSize: 12,
+                fontWeight: 600,
+                padding: '2px 10px',
+                borderRadius: 14,
+                backgroundColor,
+                color,
+                border: `1px solid ${borderColor}`,
+              }}
+            >
+              {label}
+            </Tag>
+          );
         }
     },
     {

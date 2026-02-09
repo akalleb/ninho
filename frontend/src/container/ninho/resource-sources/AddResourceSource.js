@@ -222,6 +222,15 @@ function AddResourceSource() {
                         </Upload>
                     </Form.Item>
                   </Col>
+
+                  <Col xs={24} style={{ textAlign: 'right', marginTop: 16 }}>
+                    <Button style={{ marginRight: 8 }} onClick={() => router.push('/admin/resource-sources')}>
+                      Cancelar
+                    </Button>
+                    <Button type="primary" htmlType="submit" loading={loading}>
+                      Salvar
+                    </Button>
+                  </Col>
                 </Row>
               </Form>
             </Cards>

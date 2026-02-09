@@ -150,38 +150,38 @@ function MenuItems({ darkMode, toggleCollapsed, topMenu, events }) {
 
       {/* Visível apenas para Admin */}
       {userRole === 'admin' && (
-        <SubMenu key="admin" icon={!topMenu && <FeatherIcon icon="settings" />} title="Administração">
-          <Menu.Item key="users">
+        <>
+          <Menu.Item key="users" icon={!topMenu && <FeatherIcon icon="users" />}>
             <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/dataTable`} activeClassName="">
               Colaboradores
             </NextNavLink>
           </Menu.Item>
-          <Menu.Item key="notifications">
-            <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/notifications`} activeClassName="">
-              Notificações
-            </NextNavLink>
-          </Menu.Item>
-          <Menu.Item key="reports">
+          <Menu.Item key="reports" icon={!topMenu && <FeatherIcon icon="bar-chart-2" />}>
             <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/reports`} activeClassName="">
               Relatórios
             </NextNavLink>
           </Menu.Item>
-          <Menu.Item key="resource-sources">
+          <Menu.Item key="resource-sources" icon={!topMenu && <FeatherIcon icon="layers" />}>
             <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/resource-sources`} activeClassName="">
               Fontes de Recursos
             </NextNavLink>
           </Menu.Item>
-          <Menu.Item key="wallets">
+          <Menu.Item key="wallets" icon={!topMenu && <FeatherIcon icon="briefcase" />}>
             <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/wallets`} activeClassName="">
               Carteiras / Fundos
             </NextNavLink>
           </Menu.Item>
-          <Menu.Item key="incomes">
+          <Menu.Item key="incomes" icon={!topMenu && <FeatherIcon icon="trending-up" />}>
             <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/incomes`} activeClassName="">
               Entradas de Receita
             </NextNavLink>
           </Menu.Item>
-        </SubMenu>
+          <Menu.Item key="notifications" icon={!topMenu && <FeatherIcon icon="bell" />}>
+            <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/notifications`} activeClassName="">
+              Notificações
+            </NextNavLink>
+          </Menu.Item>
+        </>
       )}
     </Menu>
   );

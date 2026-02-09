@@ -39,7 +39,11 @@ function Filters({ onFilterChange }) {
       <Row gutter={25} align="bottom">
         <Col xs={24} md={6}>
           <Form.Item name="dateRange" label="Período">
-            <RangePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
+            <RangePicker
+              style={{ width: '100%' }}
+              format="DD/MM/YYYY"
+              placeholder={['Data inicial', 'Data final']}
+            />
           </Form.Item>
         </Col>
         <Col xs={24} md={6}>

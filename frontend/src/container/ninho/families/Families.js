@@ -166,14 +166,53 @@ function Families() {
       dataIndex: 'vulnerability_status',
       key: 'vulnerability_status',
       render: (status) => {
-          const map = {
-              'desemprego': { color: 'error', label: 'Desemprego' },
-              'baixa_renda': { color: 'warning', label: 'Baixa Renda' },
-              'inseguranca_alimentar': { color: 'magenta', label: 'Inseg. Alimentar' },
-              'outros': { color: 'blue', label: 'Outros' }
-          };
-          const item = map[status] || { color: 'default', label: status };
-          return <Tag color={item.color}>{item.label}</Tag>;
+          let label = 'Não Informado';
+          let backgroundColor = '#f5f5f5';
+          let color = '#595959';
+          let borderColor = 'transparent';
+
+          if (status === 'desemprego') {
+            label = 'Desemprego';
+            backgroundColor = '#fff1f0';
+            color = '#a8071a';
+            borderColor = '#ffa39e';
+          }
+          if (status === 'baixa_renda') {
+            label = 'Baixa Renda';
+            backgroundColor = '#fff7e6';
+            color = '#ad4e00';
+            borderColor = '#ffd591';
+          }
+          if (status === 'inseguranca_alimentar') {
+            label = 'Inseg. Alimentar';
+            backgroundColor = '#fff0f6';
+            color = '#c41d7f';
+            borderColor = '#ffadd2';
+          }
+          if (status === 'outros') {
+            label = 'Outros';
+            backgroundColor = '#e6f4ff';
+            color = '#0958d9';
+            borderColor = '#91caff';
+          }
+
+          return (
+            <Tag
+              style={{
+                minWidth: 120,
+                textAlign: 'center',
+                fontSize: 12,
+                fontWeight: 600,
+                padding: '2px 12px',
+                borderRadius: 14,
+                backgroundColor,
+                color,
+                border: `1px solid ${borderColor}`,
+              }}
+            >
+              {label}
+            </Tag>
+          );
       }
     },
     {

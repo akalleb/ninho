@@ -104,39 +104,66 @@ function ResourceSourceDataTable() {
 
   const showUsageDetails = async (source) => {
     try {
-      // Fetch expenses linked to this source
-      // Assuming we can filter expenses by source_id. We might need to update backend or filter client-side if not supported.
-      // Current backend read_expenses only supports wallet_id, start_date, end_date.
-      // Let's implement a quick client-side filter or assume we added source_id filter to backend.
-      // Ideally backend should support source_id. Let's assume we add it or fetch all and filter.
-      // For now, let's fetch all (limit if needed) and filter client side as quick fix, but backend change is better.
-      // Let's try to pass source_id to expenses endpoint. If it ignores, we get all and filter.
       const { data } = await api.get('/expenses/', { params: { source_id: source.id } });
-      const linkedExpenses = data.filter(e => e.source_id === source.id);
-      
+      const linkedExpenses = data || [];
+      const usedFromExpenses = linkedExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+      const totalValue = source.total_value_estimated || 0;
+      const usedFromSource = source.balance_used || 0;
+      const availableFromSource = totalValue - usedFromSource;
+      const diff = usedFromSource - usedFromExpenses;
+
       Modal.info({
         title: `Detalhamento de Uso: ${source.name}`,
         width: 600,
         content: (
           <div>
             <div style={{ marginBottom: 15 }}>
-              <p><strong>Valor Total:</strong> R$ {source.total_value_estimated?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-              <p><strong>Utilizado:</strong> R$ {source.balance_used?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-              <p><strong>Disponível:</strong> R$ {(source.total_value_estimated - source.balance_used)?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+              <p>
+                <strong>Valor Total:</strong>{' '}
+                R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p>
+                <strong>Utilizado (Fonte):</strong>{' '}
+                R$ {usedFromSource.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p>
+                <strong>Utilizado (Despesas vinculadas):</strong>{' '}
+                R$ {usedFromExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p>
+                <strong>Diferença:</strong>{' '}
+                R$ {diff.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <p>
+                <strong>Disponível (Fonte):</strong>{' '}
+                R$ {availableFromSource.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
             </div>
-            <Table 
+            <Table
               dataSource={linkedExpenses}
               rowKey="id"
               size="small"
               pagination={{ pageSize: 5 }}
               columns={[
-                { title: 'Data', dataIndex: 'paid_at', render: d => d ? new Date(d).toLocaleDateString('pt-BR') : '-' },
+                {
+                  title: 'Data',
+                  dataIndex: 'paid_at',
+                  render: (d) =>
+                    d ? new Date(d).toLocaleDateString('pt-BR') : '-',
+                },
                 { title: 'Descrição', dataIndex: 'description' },
-                { title: 'Valor', dataIndex: 'amount', render: v => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` }
+                {
+                  title: 'Valor',
+                  dataIndex: 'amount',
+                  render: (v) =>
+                    `R$ ${v.toLocaleString('pt-BR', {
+                      minimumFractionDigits: 2,
+                    })}`,
+                },
               ]}
             />
           </div>
-        )
+        ),
       });
     } catch (error) {
       notification.error({ message: 'Erro ao buscar detalhes de uso' });
@@ -238,13 +265,47 @@ function ResourceSourceDataTable() {
       dataIndex: 'status',
       key: 'status',
       render: (status) => {
-        let color = 'default';
         let text = status;
-        if (status === 'active') { color = 'success'; text = 'Ativo'; }
-        if (status === 'inactive') { color = 'error'; text = 'Inativo'; }
-        if (status === 'in_progress') { color = 'warning'; text = 'Em Vigência'; }
-        
-        return <Tag color={color}>{text}</Tag>;
+        let backgroundColor = '#f5f5f5';
+        let color = '#595959';
+        let borderColor = 'transparent';
+
+        if (status === 'active') {
+          text = 'Ativo';
+          backgroundColor = '#f6ffed';
+          color = '#135200';
+          borderColor = '#b7eb8f';
+        }
+        if (status === 'inactive') {
+          text = 'Inativo';
+          backgroundColor = '#fff1f0';
+          color = '#a8071a';
+          borderColor = '#ffa39e';
+        }
+        if (status === 'in_progress') {
+          text = 'Em Vigência';
+          backgroundColor = '#fff7e6';
+          color = '#ad4e00';
+          borderColor = '#ffd591';
+        }
+
+        return (
+          <Tag
+            style={{
+              minWidth: 90,
+              textAlign: 'center',
+              fontSize: 13,
+              fontWeight: 600,
+              padding: '2px 12px',
+              borderRadius: 14,
+              backgroundColor,
+              color,
+              border: `1px solid ${borderColor}`,
+            }}
+          >
+            {text}
+          </Tag>
+        );
       }
     },
     {

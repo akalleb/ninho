@@ -132,12 +132,6 @@ function AddChild() {
       <Main>
         <Cards
             title={isEditMode ? 'Editar Criança' : 'Nova Criança'}
-            isbutton={
-                <div style={{ display: 'flex', gap: 10 }}>
-                    <Button key="back" onClick={() => router.push('/admin/children')}>Cancelar</Button>
-                    <Button key="save" type="primary" onClick={handleSave} loading={loading}>Salvar</Button>
-                </div>
-            }
         >
             <Form form={form} layout="vertical">
                 <Row gutter={25}>
@@ -355,6 +349,16 @@ function AddChild() {
                         </Col>
                      </Row>
                 </Cards>
+                <Row justify="end" style={{ marginTop: 16 }}>
+                  <Col>
+                    <Button style={{ marginRight: 8 }} onClick={() => router.push('/admin/children')}>
+                      Cancelar
+                    </Button>
+                    <Button type="primary" onClick={handleSave} loading={loading}>
+                      {isEditMode ? 'Salvar Alterações' : 'Salvar Criança'}
+                    </Button>
+                  </Col>
+                </Row>
             </Form>
         </Cards>
       </Main>

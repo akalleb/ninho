@@ -344,7 +344,24 @@ function AttendancePage({ params }) {
                                 <List
                                     itemLayout="horizontal"
                                     dataSource={medications}
-                                    locale={{ emptyText: 'Nenhuma medicação registrada' }}
+                                    locale={{
+                                        emptyText: child ? (
+                                            <div style={{ textAlign: 'center' }}>
+                                                <p style={{ marginBottom: 8 }}>
+                                                    Nenhuma medicação registrada para esta criança.
+                                                </p>
+                                                <Button
+                                                    size="small"
+                                                    type="primary"
+                                                    onClick={openAddMedicationModal}
+                                                >
+                                                    Adicionar medicação
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            'Nenhuma medicação registrada'
+                                        ),
+                                    }}
                                     renderItem={(item) => (
                                         <List.Item
                                             actions={[

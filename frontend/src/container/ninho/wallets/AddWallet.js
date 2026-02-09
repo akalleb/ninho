@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Form, Input, Select, Button, Card, App, Switch, InputNumber } from 'antd';
+import { Row, Col, Form, Input, Select, Button, Card, App, Switch, InputNumber, Tooltip } from 'antd';
+import { QuestionCircleOutlined } from '@ant-design/icons';
 import { Main } from '../../styled';
 import api from '../../../config/api/axios';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -122,8 +123,21 @@ function AddWallet() {
 
                 <Row gutter={15}>
                     <Col span={12}>
-                        <Form.Item name="is_restricted" label="Recurso Carimbado?" valuePropName="checked">
-                            <Switch checkedChildren="Sim" unCheckedChildren="Não" />
+                        <Form.Item
+                          name="is_restricted"
+                          label={
+                            <span>
+                              Recurso Carimbado?{' '}
+                              <Tooltip
+                                title="Recursos que só podem ser usados em finalidades específicas, como emendas, convênios ou fundos vinculados."
+                              >
+                                <QuestionCircleOutlined style={{ marginLeft: 4 }} />
+                              </Tooltip>
+                            </span>
+                          }
+                          valuePropName="checked"
+                        >
+                          <Switch checkedChildren="Sim" unCheckedChildren="Não" />
                         </Form.Item>
                     </Col>
                 </Row>
@@ -131,6 +145,17 @@ function AddWallet() {
                 <Form.Item name="description" label="Descrição / Finalidade">
                   <TextArea rows={4} />
                 </Form.Item>
+
+                <Row justify="end" style={{ marginTop: 16 }}>
+                  <Col>
+                    <Button style={{ marginRight: 8 }} onClick={() => router.push('/admin/wallets')}>
+                      Cancelar
+                    </Button>
+                    <Button type="primary" htmlType="submit" loading={loading}>
+                      {isEditMode ? 'Salvar Alterações' : 'Criar Carteira'}
+                    </Button>
+                  </Col>
+                </Row>
               </Form>
             </Cards>
           </Col>

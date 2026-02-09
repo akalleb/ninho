@@ -99,8 +99,8 @@ function AddIncome() {
   return (
     <>
       <Main>
-        <Row gutter={25}>
-          <Col xs={24} md={12}>
+        <Row gutter={25} justify="center">
+          <Col xs={24} md={20} lg={18} xl={16}>
             <Cards 
                 title="Nova Receita (Entrada)"
                 extra={
@@ -119,6 +119,9 @@ function AddIncome() {
                 layout="vertical"
                 onFinish={handleSubmit}
               >
+                <div style={{ marginBottom: 16, fontWeight: 600, fontSize: 15 }}>
+                  Dados da Receita
+                </div>
                 <Row gutter={25}>
                   <Col xs={24} md={12}>
                     <Form.Item name="wallet_id" label="Carteira de Destino" rules={[{ required: true, message: 'Obrigatório' }]}>
@@ -134,7 +137,6 @@ function AddIncome() {
                       </Select>
                     </Form.Item>
                   </Col>
-                  
                   <Col xs={24} md={12}>
                     <Form.Item name="source_id" label="Fonte de Recurso" rules={[{ required: true, message: 'Obrigatório' }]}>
                       <Select placeholder="Selecione a fonte" disabled={!selectedWallet}>
@@ -197,7 +199,12 @@ function AddIncome() {
                       </Select>
                     </Form.Item>
                   </Col>
+                </Row>
 
+                <div style={{ margin: '24px 0 16px', fontWeight: 600, fontSize: 15 }}>
+                  Documentos e Observações
+                </div>
+                <Row gutter={25}>
                   <Col xs={24}>
                     <Form.Item label="Documentos de Rastreio (Notas, Ofícios, Extratos)">
                         <Upload {...uploadProps} maxCount={5} multiple>
@@ -210,6 +217,16 @@ function AddIncome() {
                     <Form.Item name="description" label="Descrição / Observações">
                       <TextArea rows={3} />
                     </Form.Item>
+                  </Col>
+                </Row>
+                <Row justify="end" style={{ marginTop: 16 }}>
+                  <Col>
+                    <Button style={{ marginRight: 8 }} onClick={() => router.push('/admin/incomes')}>
+                      Cancelar
+                    </Button>
+                    <Button type="primary" htmlType="submit" loading={loading}>
+                      Confirmar Entrada
+                    </Button>
                   </Col>
                 </Row>
               </Form>

@@ -267,11 +267,49 @@ function ChildDashboard({ params }) {
                             <Descriptions.Item label="Responsável">{child.guardian_name || '-'}</Descriptions.Item>
                             <Descriptions.Item label="Sexo">{child.gender || '-'}</Descriptions.Item>
                             <Descriptions.Item label="Nível de Suporte">
-                                {child.severity_level ? (
-                                    <Tag color={child.severity_level === 'grave' ? 'red' : child.severity_level === 'media' ? 'orange' : 'green'}>
-                                      {child.severity_level.toUpperCase()}
-                                    </Tag>
-                                ) : '-'}
+                                {child.severity_level ? (() => {
+                                    let text = '';
+                                    let backgroundColor = '#f5f5f5';
+                                    let color = '#595959';
+                                    let borderColor = 'transparent';
+
+                                    if (child.severity_level === 'leve') {
+                                        text = 'Leve (Nível 1)';
+                                        backgroundColor = '#f6ffed';
+                                        color = '#135200';
+                                        borderColor = '#b7eb8f';
+                                    }
+                                    if (child.severity_level === 'media') {
+                                        text = 'Moderado (Nível 2)';
+                                        backgroundColor = '#fff7e6';
+                                        color = '#ad4e00';
+                                        borderColor = '#ffd591';
+                                    }
+                                    if (child.severity_level === 'grave') {
+                                        text = 'Grave (Nível 3)';
+                                        backgroundColor = '#fff1f0';
+                                        color = '#a8071a';
+                                        borderColor = '#ffa39e';
+                                    }
+
+                                    return (
+                                      <Tag
+                                        style={{
+                                          minWidth: 140,
+                                          textAlign: 'center',
+                                          fontSize: 12,
+                                          fontWeight: 600,
+                                          padding: '2px 12px',
+                                          borderRadius: 14,
+                                          backgroundColor,
+                                          color,
+                                          border: `1px solid ${borderColor}`,
+                                        }}
+                                      >
+                                        {text}
+                                      </Tag>
+                                    );
+                                })() : '-'}
                             </Descriptions.Item>
                             <Descriptions.Item label="Diagnóstico fechado">{child.is_diagnosis_closed ? 'Sim' : 'Em investigação'}</Descriptions.Item>
                             <Descriptions.Item label="Tipo Sanguíneo">{child.blood_type || '-'}</Descriptions.Item>
@@ -279,7 +317,13 @@ function ChildDashboard({ params }) {
                             <Descriptions.Item label="Altura">{child.height != null ? `${child.height} cm` : '-'}</Descriptions.Item>
                             <Descriptions.Item label="Perímetro Cefálico">{child.cephalic_perimeter != null ? `${child.cephalic_perimeter} cm` : '-'}</Descriptions.Item>
                             <Descriptions.Item label="Alergias">{child.allergies || 'Nenhuma relatada'}</Descriptions.Item>
-                            <Descriptions.Item label="Histórico Gestacional">{child.gestational_history || '-'}</Descriptions.Item>
+                            <Descriptions.Item label="Histórico Gestacional">
+                                {child.gestational_history ? (
+                                  <span style={{ fontSize: 13, fontWeight: 600 }}>
+                                    {child.gestational_history}
+                                  </span>
+                                ) : '-'}
+                            </Descriptions.Item>
                             <Descriptions.Item label="Emergência">{child.emergency_contact || '-'}</Descriptions.Item>
                             <Descriptions.Item label="Necessidades específicas">{assistanceNeeds.length ? assistanceNeeds.join(', ') : 'Não informado'}</Descriptions.Item>
                             <Descriptions.Item label="Acesso a tratamento/terapia">

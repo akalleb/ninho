@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Table, Button, Modal, App, Tooltip } from 'antd';
+import { Row, Col, Table, Button, Modal, App, Drawer, Descriptions, Tag, Avatar, Divider } from 'antd';
 import FeatherIcon from 'feather-icons-react';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '../../../components/page-headers/page-headers';
 import { Main } from '../../styled';
 import { Cards } from '../../../components/cards/frame/cards-frame';
 import api from '../../../config/api/axios';
+import { UserOutlined } from '@ant-design/icons';
+import moment from 'moment';
 
 function UserDataTable() {
   const [professionals, setProfessionals] = useState([]);
@@ -13,6 +15,7 @@ function UserDataTable() {
   const [viewingProfessional, setViewingProfessional] = useState(null);
   const router = useRouter();
   const { notification } = App.useApp();
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
   const fetchProfessionals = async () => {
     setLoading(true);
@@ -90,6 +93,15 @@ function UserDataTable() {
       title: 'Nome',
       dataIndex: 'name',
       key: 'name',
+      render: (text, record) => (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Avatar
+                src={record.avatar_url ? `${apiBaseUrl}${record.avatar_url}` : undefined}
+                icon={<UserOutlined />}
+              />
+              <span>{text}</span>
+          </div>
+      )
     },
     {
       title: 'E-mail',
@@ -100,22 +112,112 @@ function UserDataTable() {
       title: 'Vínculo',
       dataIndex: 'employment_type',
       key: 'employment_type',
-      render: (type) => (type === 'effective' ? 'Efetivo' : 'Voluntário'),
+      render: (type) => {
+        if (!type) {
+          return (
+            <Tag
+              style={{
+                fontSize: 12,
+                fontWeight: 500,
+                borderRadius: 14,
+                padding: '2px 10px',
+                backgroundColor: '#fafafa',
+                color: '#8c8c8c',
+                border: '1px dashed #d9d9d9',
+              }}
+            >
+              Não informado
+            </Tag>
+          );
+        }
+
+        const isEffective = type === 'effective';
+        const backgroundColor = isEffective ? '#e6f4ff' : '#f6ffed';
+        const color = isEffective ? '#0958d9' : '#237804';
+        const borderColor = isEffective ? '#91caff' : '#b7eb8f';
+        const label = isEffective ? 'Efetivo' : 'Voluntário';
+
+        return (
+          <Tag
+            style={{
+              minWidth: 100,
+              textAlign: 'center',
+              fontSize: 12,
+              fontWeight: 600,
+              padding: '2px 10px',
+              borderRadius: 14,
+              backgroundColor,
+              color,
+              border: `1px solid ${borderColor}`,
+            }}
+          >
+            {label}
+          </Tag>
+        );
+      },
     },
     {
       title: 'Função',
       dataIndex: 'role',
       key: 'role',
       render: (role) => {
-        let label = role;
-        if (role === 'admin') {
-            label = 'Gestor';
-        } else if (role === 'operational') {
-            label = 'Operacional';
-        } else if (role === 'health') {
-            label = 'Saúde';
+        if (!role) {
+          return (
+            <Tag
+              style={{
+                fontSize: 12,
+                fontWeight: 500,
+                borderRadius: 14,
+                padding: '2px 10px',
+                backgroundColor: '#fafafa',
+                color: '#8c8c8c',
+                border: '1px dashed #d9d9d9',
+              }}
+            >
+              Não informado
+            </Tag>
+          );
         }
-        return label;
+
+        let label = role;
+        let backgroundColor = '#f5f5f5';
+        let color = '#595959';
+        let borderColor = '#d9d9d9';
+
+        if (role === 'admin') {
+          label = 'Gestor';
+          backgroundColor = '#f9f0ff';
+          color = '#531dab';
+          borderColor = '#d3adf7';
+        } else if (role === 'operational') {
+          label = 'Operacional';
+          backgroundColor = '#e6fffb';
+          color = '#006d75';
+          borderColor = '#87e8de';
+        } else if (role === 'health') {
+          label = 'Saúde';
+          backgroundColor = '#fff0f6';
+          color = '#c41d7f';
+          borderColor = '#ffadd2';
+        }
+
+        return (
+          <Tag
+            style={{
+              minWidth: 110,
+              textAlign: 'center',
+              fontSize: 12,
+              fontWeight: 600,
+              padding: '2px 10px',
+              borderRadius: 14,
+              backgroundColor,
+              color,
+              border: `1px solid ${borderColor}`,
+            }}
+          >
+            {label}
+          </Tag>
+        );
       },
     },
     {
@@ -127,6 +229,7 @@ function UserDataTable() {
           size="small"
           type={status === 'active' ? 'primary' : 'default'}
           onClick={() => handleToggleStatus(record)}
+          ghost={status !== 'active'}
         >
           {status === 'active' ? 'Ativo' : 'Inativo'}
         </Button>
@@ -137,25 +240,25 @@ function UserDataTable() {
       key: 'action',
       render: (_, record) => (
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <Button 
-            size="small" 
-            type="default"
-            icon={<FeatherIcon icon="eye" size={14} />}
-            onClick={() => handleView(record)}
-          />
-          <Button 
-            size="small" 
-            type="primary" 
-            icon={<FeatherIcon icon="edit" size={14} />}
-            onClick={() => handleEdit(record.id)}
-          />
-          <Button 
-            size="small" 
-            type="primary"
-            danger 
-            icon={<FeatherIcon icon="trash-2" size={14} />}
-            onClick={() => handleDelete(record.id)}
-          />
+            <Button 
+                size="small" 
+                type="default"
+                icon={<FeatherIcon icon="eye" size={14} />}
+                onClick={() => handleView(record)}
+            />
+            <Button 
+                size="small" 
+                type="primary" 
+                icon={<FeatherIcon icon="edit" size={14} />}
+                onClick={() => handleEdit(record.id)}
+            />
+            <Button 
+                size="small" 
+                type="primary"
+                danger 
+                icon={<FeatherIcon icon="trash-2" size={14} />}
+                onClick={() => handleDelete(record.id)}
+            />
         </div>
       ),
     },
@@ -188,60 +291,85 @@ function UserDataTable() {
                 loading={loading}
                 rowKey="id"
               />
-              <Modal
+              
+              <Drawer
+                width={640}
+                placement="right"
+                closable={true}
+                onClose={() => setViewingProfessional(null)}
                 open={!!viewingProfessional}
-                title="Detalhes do Colaborador"
-                footer={[
-                  <Button key="close" onClick={() => setViewingProfessional(null)}>
-                    Fechar
-                  </Button>,
-                ]}
-                onCancel={() => setViewingProfessional(null)}
+                title={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
+                        <Avatar size={64} src={viewingProfessional?.avatar_url} icon={<UserOutlined />} />
+                        <div>
+                            <h3 style={{ margin: 0 }}>{viewingProfessional?.name}</h3>
+                            <span style={{ color: '#888' }}>{viewingProfessional?.email}</span>
+                        </div>
+                    </div>
+                }
               >
                 {viewingProfessional && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', rowGap: 8 }}>
-                    <div>
-                      <strong>Nome:</strong> {viewingProfessional.name}
-                    </div>
-                    <div>
-                      <strong>E-mail:</strong> {viewingProfessional.email}
-                    </div>
-                    <div>
-                      <strong>CPF:</strong> {viewingProfessional.cpf}
-                    </div>
-                    <div>
-                      <strong>RG:</strong> {viewingProfessional.rg || '-'}
-                    </div>
-                    <div>
-                      <strong>Vínculo:</strong>{' '}
-                      {viewingProfessional.employment_type === 'effective' ? 'Efetivo' : 'Voluntário'}
-                    </div>
-                    <div>
-                      <strong>Perfil de Acesso:</strong>{' '}
-                      {viewingProfessional.role === 'admin'
-                        ? 'Gestor'
-                        : viewingProfessional.role === 'operational'
-                        ? 'Operacional'
-                        : 'Profissional de Saúde'}
-                    </div>
-                    <div>
-                      <strong>Função:</strong> {viewingProfessional.function_role || '-'}
-                    </div>
-                    <div>
-                      <strong>Endereço:</strong> {viewingProfessional.address || '-'}
-                    </div>
-                    <div>
-                      <strong>Dados Bancários:</strong> {viewingProfessional.bank_data || '-'}
-                    </div>
-                    <div>
-                      <strong>CBO:</strong> {viewingProfessional.cbo || '-'}
-                    </div>
-                    <div>
-                      <strong>Conselho de Classe:</strong> {viewingProfessional.registry_number || '-'}
-                    </div>
-                  </div>
+                  <>
+                    <Descriptions title="Informações Pessoais" column={1} bordered size="small">
+                        <Descriptions.Item label="CPF">{viewingProfessional.cpf}</Descriptions.Item>
+                        <Descriptions.Item label="RG">{viewingProfessional.rg || '-'}</Descriptions.Item>
+                        <Descriptions.Item label="Data de Nascimento">
+                            {viewingProfessional.birth_date ? moment(viewingProfessional.birth_date).format('DD/MM/YYYY') : '-'}
+                        </Descriptions.Item>
+                    </Descriptions>
+
+                    <Divider />
+
+                    <Descriptions title="Dados Profissionais" column={1} bordered size="small">
+                         <Descriptions.Item label="Cargo / Função">{viewingProfessional.function_role || '-'}</Descriptions.Item>
+                         <Descriptions.Item label="Perfil de Acesso">
+                            {viewingProfessional.role === 'admin' ? 'Gestor' : viewingProfessional.role === 'operational' ? 'Operacional' : 'Profissional de Saúde'}
+                         </Descriptions.Item>
+                         <Descriptions.Item label="Tipo de Vínculo">
+                             {viewingProfessional.employment_type === 'effective' ? 'Efetivo' : 'Voluntário'}
+                         </Descriptions.Item>
+                         <Descriptions.Item label="Data de Admissão">
+                             {viewingProfessional.admission_date ? moment(viewingProfessional.admission_date).format('DD/MM/YYYY') : '-'}
+                         </Descriptions.Item>
+                         <Descriptions.Item label="Validade do Contrato">
+                             {viewingProfessional.contract_validity ? moment(viewingProfessional.contract_validity).format('DD/MM/YYYY') : 'Indeterminado'}
+                         </Descriptions.Item>
+                         {viewingProfessional.role === 'health' && (
+                             <>
+                                <Descriptions.Item label="Especialidade">{viewingProfessional.specialty || '-'}</Descriptions.Item>
+                                <Descriptions.Item label="Registro Profissional">{viewingProfessional.registry_number || '-'}</Descriptions.Item>
+                                <Descriptions.Item label="CBO">{viewingProfessional.cbo || '-'}</Descriptions.Item>
+                                <Descriptions.Item label="CNS">{viewingProfessional.cns || '-'}</Descriptions.Item>
+                             </>
+                         )}
+                    </Descriptions>
+
+                    <Divider />
+
+                    <Descriptions title="Contato e Endereço" column={1} bordered size="small">
+                        <Descriptions.Item label="Telefone">{viewingProfessional.phone || '-'}</Descriptions.Item>
+                        <Descriptions.Item label="Endereço">{viewingProfessional.address || '-'}</Descriptions.Item>
+                        <Descriptions.Item label="Site / Portfolio">{viewingProfessional.website || '-'}</Descriptions.Item>
+                    </Descriptions>
+                    
+                    <Divider />
+
+                    <Descriptions title="Dados Bancários" column={1} bordered size="small">
+                        <Descriptions.Item label="Banco / Pix">
+                            <pre style={{ margin: 0, fontFamily: 'inherit' }}>{viewingProfessional.bank_data || '-'}</pre>
+                        </Descriptions.Item>
+                    </Descriptions>
+
+                    {viewingProfessional.bio && (
+                        <>
+                            <Divider />
+                            <h3>Bio / Observações</h3>
+                            <p>{viewingProfessional.bio}</p>
+                        </>
+                    )}
+                  </>
                 )}
-              </Modal>
+              </Drawer>
             </Cards>
           </Col>
         </Row>

@@ -35,9 +35,9 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # For development, allow all origins explicitly to avoid issues
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
@@ -437,8 +437,19 @@ class RevenueBase(BaseModel):
 class RevenueCreate(RevenueBase):
     pass
 
-class RevenueUpdate(RevenueBase):
-    pass
+class RevenueUpdate(BaseModel):
+    amount: float | None = None
+    received_at: date | None = None
+    source_id: int | None = None
+    wallet_id: int | None = None
+    payment_method: str | None = None
+    description: str | None = None
+    origin_sphere: str | None = None
+    status: str | None = None
+    reconciliation_date: date | None = None
+    is_reconciled: bool | None = None
+    tracking_code: str | None = None
+    observations: str | None = None
 
 class Revenue(RevenueBase):
     id: int
@@ -1457,6 +1468,7 @@ def create_expense(expense: ExpenseCreate, db: Session = Depends(get_db)):
 @app.get("/expenses/", response_model=List[Expense])
 def read_expenses(
     wallet_id: Optional[int] = None,
+    source_id: Optional[int] = None,
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     db: Session = Depends(get_db)
@@ -1464,6 +1476,8 @@ def read_expenses(
     query = db.query(models.Expense)
     if wallet_id:
         query = query.filter(models.Expense.wallet_id == wallet_id)
+    if source_id:
+        query = query.filter(models.Expense.source_id == source_id)
     if start_date:
         query = query.filter(models.Expense.paid_at >= start_date)
     if end_date:
@@ -1513,7 +1527,12 @@ def get_wallet_dashboard(wallet_id: int, db: Session = Depends(get_db)):
 # --- Wallets Endpoints ---
 @app.post("/wallets/", response_model=Wallet)
 def create_wallet(wallet: WalletCreate, db: Session = Depends(get_db)):
-    db_wallet = models.Wallet(**wallet.model_dump())
+    wallet_data = wallet.model_dump()
+    initial_balance = wallet_data.pop("initial_balance", 0.0)
+
+    db_wallet = models.Wallet(**wallet_data)
+    db_wallet.balance = initial_balance
+
     db.add(db_wallet)
     db.commit()
     db.refresh(db_wallet)

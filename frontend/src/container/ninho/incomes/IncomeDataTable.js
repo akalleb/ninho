@@ -228,18 +228,56 @@ function IncomeDataTable() {
       dataIndex: 'status',
       key: 'status',
       render: (status, record) => {
-          let color = 'default';
-          if (status === 'recebido') color = 'processing';
-          if (status === 'conciliado') color = 'success';
-          if (status === 'pendente') color = 'warning';
-          if (status === 'cancelado') color = 'error';
+          let text = 'Pendente';
+          let backgroundColor = '#fff7e6';
+          let color = '#ad4e00';
+          let borderColor = '#ffd591';
+
+          if (status === 'recebido') {
+            text = 'Recebido';
+            backgroundColor = '#f6ffed';
+            color = '#135200';
+            borderColor = '#b7eb8f';
+          }
+          if (status === 'conciliado') {
+            text = 'Conciliado';
+            backgroundColor = '#e6f4ff';
+            color = '#0958d9';
+            borderColor = '#91caff';
+          }
+          if (status === 'cancelado') {
+            text = 'Cancelado';
+            backgroundColor = '#fff1f0';
+            color = '#a8071a';
+            borderColor = '#ffa39e';
+          }
+          if (status === 'pendente') {
+            text = 'Pendente';
+            backgroundColor = '#fff7e6';
+            color = '#ad4e00';
+            borderColor = '#ffd591';
+          }
           
           // Alert logic: Pending for > 30 days
           const isOverdue = status === 'pendente' && dayjs().diff(dayjs(record.received_at), 'day') > 30;
 
           return (
               <Badge dot={isOverdue} offset={[5, 0]}>
-                  <Tag color={color}>{status ? status.toUpperCase() : 'PENDENTE'}</Tag>
+                  <Tag
+                    style={{
+                      minWidth: 110,
+                      textAlign: 'center',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      padding: '2px 12px',
+                      borderRadius: 14,
+                      backgroundColor,
+                      color,
+                      border: `1px solid ${borderColor}`,
+                    }}
+                  >
+                    {text}
+                  </Tag>
               </Badge>
           );
       }

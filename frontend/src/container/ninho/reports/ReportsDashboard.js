@@ -10,8 +10,6 @@ import FinancialReport from './FinancialReport';
 import SusExport from './SusExport';
 import Filters from './Filters';
 
-const { TabPane } = Tabs;
-
 function ReportsDashboard() {
   const [activeTab, setActiveTab] = useState('clinical');
   const [filters, setFilters] = useState({});
@@ -23,6 +21,34 @@ function ReportsDashboard() {
   const handleExportPdf = () => {
     window.print();
   };
+
+  const tabItems = [
+    {
+      key: 'clinical',
+      label: 'Produção Clínica',
+      children: (
+        <>
+          <BiCharts filters={filters} />
+          <PerformanceMatrix filters={filters} />
+        </>
+      ),
+    },
+    {
+      key: 'social',
+      label: 'Socioeconômico',
+      children: <Demographics filters={filters} />,
+    },
+    {
+      key: 'financial',
+      label: 'Financeiro',
+      children: <FinancialReport filters={filters} />,
+    },
+    {
+      key: 'export',
+      label: 'Exportação SUS',
+      children: <SusExport filters={filters} />,
+    },
+  ];
 
   return (
     <>
@@ -38,28 +64,14 @@ function ReportsDashboard() {
         ]}
       />
       <Main>
-        <Card bordered={false} style={{ marginBottom: 25 }}>
-            <Filters onFilterChange={handleFilterChange} />
+        <Card variant="borderless" style={{ marginBottom: 25 }}>
+          <Filters onFilterChange={handleFilterChange} />
         </Card>
-        
+
         <Row gutter={25}>
           <Col xs={24}>
-            <Card bordered={false}>
-              <Tabs activeKey={activeTab} onChange={setActiveTab}>
-                <TabPane tab="Produção Clínica" key="clinical">
-                   <BiCharts filters={filters} />
-                   <PerformanceMatrix filters={filters} />
-                </TabPane>
-                <TabPane tab="Socioeconômico" key="social">
-                   <Demographics filters={filters} />
-                </TabPane>
-                <TabPane tab="Financeiro" key="financial">
-                   <FinancialReport filters={filters} />
-                </TabPane>
-                <TabPane tab="Exportação SUS" key="export">
-                   <SusExport filters={filters} />
-                </TabPane>
-              </Tabs>
+            <Card variant="borderless">
+              <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} />
             </Card>
           </Col>
         </Row>
