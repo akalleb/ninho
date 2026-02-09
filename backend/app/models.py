@@ -92,6 +92,7 @@ class Professional(Base):
     specialty = Column(String, nullable=True) 
     registry_number = Column(String, nullable=True) # CRM, CRP, etc.
     cbo = Column(String, nullable=True) # CBO
+    cns = Column(String, nullable=True) # CNS do Profissional
     
     # Profile Extensions
     bio = Column(Text, nullable=True)
@@ -148,6 +149,7 @@ class Child(Base):
     child_id_url = Column(String, nullable=True)
     vaccination_card_url = Column(String, nullable=True)
     school_history_url = Column(String, nullable=True)
+    cns = Column(String, nullable=True) # CNS do Paciente
     
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -182,6 +184,7 @@ class MultidisciplinaryEvolution(Base):
     
     date_service = Column(DateTime(timezone=True), server_default=func.now())
     service_type = Column(String) # Fisioterapia, Fonoaudiologia, etc.
+    procedure_code = Column(String, nullable=True) # Código SIGTAP
     evolution_report = Column(Text) # Relato detalhado
     intermittences = Column(Text, nullable=True) # Intercorrências
     

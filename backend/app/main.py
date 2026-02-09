@@ -4,6 +4,7 @@ from sqlalchemy import func, text, or_
 from sqlalchemy.exc import IntegrityError
 from typing import List, Optional
 from . import models, database
+from .routers import reports
 from pydantic import BaseModel, EmailStr, computed_field
 from datetime import datetime, date, timedelta
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,6 +20,8 @@ import json
 models.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI(title="Sistema Ninho API")
+
+app.include_router(reports.router)
 
 origins = [
     "http://localhost:3000",
