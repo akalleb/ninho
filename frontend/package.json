@@ -11,6 +11,7 @@
   "dependencies": {
     "@ant-design/icons": "^5.2.6",
     "@ant-design/pro-components": "^2.8.10",
+    "@supabase/supabase-js": "^2.95.3",
     "ajv": "^8.17.1",
     "antd": "^5.12.8",
     "apexcharts": "^5.3.5",

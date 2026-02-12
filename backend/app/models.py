@@ -65,8 +65,10 @@ class Professional(Base):
     role = Column(String, default=UserRole.HEALTH)  # admin, operational, health
     
     # Common fields
-    cpf = Column(String, unique=True, index=True) # Sensitive
-    rg = Column(String, nullable=True) # Sensitive
+    cpf = Column(String, index=True) # Encrypted
+    cpf_hash = Column(String, unique=True, index=True) # Blind Index for search
+    rg = Column(String, nullable=True) # Encrypted
+    rg_hash = Column(String, nullable=True, index=True) # Blind Index for search
     birth_date = Column(Date, nullable=True)
     function_role = Column(String, nullable=True) # Função
     
@@ -365,9 +367,11 @@ class Family(Base):
     
     # Responsible Data
     name_responsible = Column(String, index=True)
-    rg = Column(String, nullable=True)
-    cpf = Column(String, unique=True, index=True)
-    nis_responsible = Column(String, nullable=True)
+    rg = Column(String, nullable=True) # Encrypted
+    rg_hash = Column(String, nullable=True, index=True) # Blind Index
+    cpf = Column(String, index=True) # Encrypted
+    cpf_hash = Column(String, unique=True, index=True) # Blind Index
+    nis_responsible = Column(String, nullable=True) # Encrypted
     birth_date = Column(Date, nullable=True)
     gender = Column(String, nullable=True)
     nationality = Column(String, default="Brasileira")

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, Query, UploadFile, File
+from fastapi import FastAPI, Depends, HTTPException, Query, UploadFile, File, BackgroundTasks
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, text, or_
 from sqlalchemy.exc import IntegrityError
@@ -8,7 +8,10 @@ from .routers import reports
 from pydantic import BaseModel, EmailStr, computed_field
 from datetime import datetime, date, timedelta
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi import Request
 from fastapi.staticfiles import StaticFiles
+from .core.supabase import supabase
 import os
 import time
 import hashlib
@@ -16,10 +19,23 @@ import hmac
 import base64
 import uuid
 import json
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("ninho_api")
 
 models.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI(title="Sistema Ninho API")
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    logger.info(f"{request.method} {request.url.path} - {response.status_code} - {process_time:.4f}s")
+    return response
 
 app.include_router(reports.router)
 
@@ -41,6 +57,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=["*"] # Change this to specific domains in production
+)
+
 # Static files for uploaded media
 MEDIA_ROOT = os.path.join(os.path.dirname(__file__), "..", "media")
 AVATAR_DIR = os.path.join(MEDIA_ROOT, "avatars")
@@ -49,20 +70,10 @@ os.makedirs(AVATAR_DIR, exist_ok=True)
 app.mount("/media", StaticFiles(directory=MEDIA_ROOT), name="media")
 
 
-def hash_password(password: str) -> str:
-    salt = os.urandom(16)
-    dk = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 100_000)
-    return base64.b64encode(salt + dk).decode("utf-8")
+from .core.security import hash_password, verify_password, create_access_token, oauth2_scheme, verify_supabase_token, encrypt_data, decrypt_data, get_data_hash
 
-
-def verify_password(password: str, stored_hash: str) -> bool:
-    try:
-        data = base64.b64decode(stored_hash.encode("utf-8"))
-        salt, original_dk = data[:16], data[16:]
-        new_dk = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 100_000)
-        return hmac.compare_digest(original_dk, new_dk)
-    except Exception:
-        return False
+# Note: hash_password and verify_password in main.py are now deprecated in favor of core.security
+# but kept here if used locally. The import above brings the centralized ones.
 
 # Dependency
 def get_db():
@@ -126,6 +137,34 @@ class Family(FamilyBase):
     created_at: datetime
     updated_at: datetime | None = None
     
+    @computed_field
+    def decrypted_cpf(self) -> str | None:
+        return decrypt_data(self.cpf) if self.cpf else None
+        
+    @computed_field
+    def decrypted_rg(self) -> str | None:
+        return decrypt_data(self.rg) if self.rg else None
+        
+    @computed_field
+    def decrypted_nis(self) -> str | None:
+        return decrypt_data(self.nis_responsible) if self.nis_responsible else None
+        
+    @computed_field
+    def decrypted_address(self) -> str | None:
+        return decrypt_data(self.address_full) if self.address_full else None
+        
+    @computed_field
+    def decrypted_phone(self) -> str | None:
+        return decrypt_data(self.phone) if self.phone else None
+        
+    @computed_field
+    def decrypted_email(self) -> str | None:
+        return decrypt_data(self.email) if self.email else None
+        
+    @computed_field
+    def decrypted_observations(self) -> str | None:
+        return decrypt_data(self.family_observations) if self.family_observations else None
+
     # Computed fields (helper properties)
     @computed_field
     @property
@@ -178,6 +217,22 @@ class Child(ChildBase):
     child_id_url: str | None = None
     vaccination_card_url: str | None = None
     school_history_url: str | None = None
+
+    @computed_field
+    def decrypted_diagnosis(self) -> str | None:
+        return decrypt_data(self.diagnosis) if self.diagnosis else None
+        
+    @computed_field
+    def decrypted_allergies(self) -> str | None:
+        return decrypt_data(self.allergies) if self.allergies else None
+        
+    @computed_field
+    def decrypted_gestational_history(self) -> str | None:
+        return decrypt_data(self.gestational_history) if self.gestational_history else None
+        
+    @computed_field
+    def decrypted_notes(self) -> str | None:
+        return decrypt_data(self.notes) if self.notes else None
 
     class Config:
         from_attributes = True
@@ -271,6 +326,22 @@ class Professional(ProfessionalBase):
     id: int
     created_at: datetime
     
+    @computed_field
+    def decrypted_address(self) -> str | None:
+        return decrypt_data(self.address) if self.address else None
+        
+    @computed_field
+    def decrypted_bank_data(self) -> str | None:
+        return decrypt_data(self.bank_data) if self.bank_data else None
+
+    @computed_field
+    def decrypted_cpf(self) -> str | None:
+        return decrypt_data(self.cpf) if self.cpf else None
+        
+    @computed_field
+    def decrypted_rg(self) -> str | None:
+        return decrypt_data(self.rg) if self.rg else None
+
     class Config:
         from_attributes = True
 
@@ -464,14 +535,28 @@ class Revenue(RevenueBase):
 # --- Family Endpoints ---
 @app.post("/families/", response_model=Family)
 def create_family(family: FamilyCreate, db: Session = Depends(get_db)):
-    # Check CPF
-    existing = db.query(models.Family).filter(models.Family.cpf == family.cpf).first()
+    # Check CPF Uniqueness (Blind Index)
+    cpf_hash = get_data_hash(family.cpf)
+    existing = db.query(models.Family).filter(models.Family.cpf_hash == cpf_hash).first()
     if existing:
         raise HTTPException(status_code=400, detail="CPF do responsável já cadastrado")
     
+    family_data = family.model_dump()
+    
+    # Encrypt Fields
+    family_data['cpf'] = encrypt_data(family.cpf)
+    family_data['cpf_hash'] = cpf_hash
+    family_data['rg'] = encrypt_data(family.rg) if family.rg else None
+    family_data['rg_hash'] = get_data_hash(family.rg) if family.rg else None
+    family_data['nis_responsible'] = encrypt_data(family.nis_responsible) if family.nis_responsible else None
+    family_data['address_full'] = encrypt_data(family.address_full) if family.address_full else None
+    family_data['phone'] = encrypt_data(family.phone) if family.phone else None
+    family_data['email'] = encrypt_data(family.email) if family.email else None
+    family_data['family_observations'] = encrypt_data(family.family_observations) if family.family_observations else None
+
     db_family = models.Family(
         id=str(uuid.uuid4()),
-        **family.model_dump()
+        **family_data
     )
     db.add(db_family)
     db.commit()
@@ -521,6 +606,31 @@ def update_family(family_id: str, family_update: FamilyUpdate, db: Session = Dep
         raise HTTPException(status_code=404, detail="Família não encontrada")
     
     update_data = family_update.model_dump(exclude_unset=True)
+    
+    # Handle Encryption
+    if 'cpf' in update_data:
+        update_data['cpf_hash'] = get_data_hash(update_data['cpf'])
+        update_data['cpf'] = encrypt_data(update_data['cpf'])
+    
+    if 'rg' in update_data and update_data['rg']:
+        update_data['rg_hash'] = get_data_hash(update_data['rg'])
+        update_data['rg'] = encrypt_data(update_data['rg'])
+        
+    if 'nis_responsible' in update_data and update_data['nis_responsible']:
+        update_data['nis_responsible'] = encrypt_data(update_data['nis_responsible'])
+        
+    if 'address_full' in update_data and update_data['address_full']:
+        update_data['address_full'] = encrypt_data(update_data['address_full'])
+
+    if 'phone' in update_data and update_data['phone']:
+        update_data['phone'] = encrypt_data(update_data['phone'])
+        
+    if 'email' in update_data and update_data['email']:
+        update_data['email'] = encrypt_data(update_data['email'])
+
+    if 'family_observations' in update_data and update_data['family_observations']:
+        update_data['family_observations'] = encrypt_data(update_data['family_observations'])
+
     for key, value in update_data.items():
         setattr(db_family, key, value)
     
@@ -625,7 +735,15 @@ def get_children_summary_by_severity(db: Session = Depends(get_db)):
 
 @app.post("/children/", response_model=Child)
 def create_child(child: ChildCreate, db: Session = Depends(get_db)):
-    db_child = models.Child(**child.model_dump())
+    child_data = child.model_dump()
+    
+    # Encrypt
+    child_data['diagnosis'] = encrypt_data(child.diagnosis) if child.diagnosis else None
+    child_data['allergies'] = encrypt_data(child.allergies) if child.allergies else None
+    child_data['gestational_history'] = encrypt_data(child.gestational_history) if child.gestational_history else None
+    child_data['notes'] = encrypt_data(child.notes) if child.notes else None
+    
+    db_child = models.Child(**child_data)
     db.add(db_child)
     db.commit()
     db.refresh(db_child)
@@ -663,6 +781,20 @@ def update_child(child_id: int, child_update: ChildCreate, db: Session = Depends
         raise HTTPException(status_code=404, detail="Criança não encontrada")
     
     update_data = child_update.model_dump(exclude_unset=True)
+    
+    # Handle Encryption
+    if 'diagnosis' in update_data and update_data['diagnosis']:
+        update_data['diagnosis'] = encrypt_data(update_data['diagnosis'])
+        
+    if 'allergies' in update_data and update_data['allergies']:
+        update_data['allergies'] = encrypt_data(update_data['allergies'])
+        
+    if 'gestational_history' in update_data and update_data['gestational_history']:
+        update_data['gestational_history'] = encrypt_data(update_data['gestational_history'])
+
+    if 'notes' in update_data and update_data['notes']:
+        update_data['notes'] = encrypt_data(update_data['notes'])
+
     for key, value in update_data.items():
         setattr(db_child, key, value)
         
@@ -807,34 +939,69 @@ def list_all_evolutions(
         
     return query.limit(limit).all()
 
+def create_supabase_user(email: str, password: str, metadata: dict):
+    if not supabase:
+        logger.warning("Supabase client not initialized. Skipping Auth user creation.")
+        return
+
+    try:
+        # Tenta criar usuário via signUp (única opção com ANON_KEY)
+        # Nota: Isso pode disparar e-mail de confirmação dependendo da config do Supabase
+        # Para criação admin direta sem confirmação, seria necessário SERVICE_ROLE_KEY
+        response = supabase.auth.sign_up({
+            "email": email,
+            "password": password,
+            "options": {
+                "data": metadata
+            }
+        })
+        logger.info(f"Supabase user created/registered for {email}")
+    except Exception as e:
+        # Não bloqueia o fluxo se falhar (ex: usuário já existe)
+        logger.error(f"Failed to create Supabase user: {e}")
+
 # --- Professionals Endpoints ---
 @app.post("/professionals/", response_model=Professional)
-def create_professional(professional: ProfessionalCreate, db: Session = Depends(get_db)):
+def create_professional(
+    professional: ProfessionalCreate, 
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
     # Check if Email or CPF already exists
     existing_email = db.query(models.Professional).filter(models.Professional.email == professional.email).first()
     if existing_email:
         raise HTTPException(status_code=400, detail="Email already registered")
     
-    existing_cpf = db.query(models.Professional).filter(models.Professional.cpf == professional.cpf).first()
+    # Use Blind Index (Hash) for CPF uniqueness check
+    cpf_hash = get_data_hash(professional.cpf)
+    existing_cpf = db.query(models.Professional).filter(models.Professional.cpf_hash == cpf_hash).first()
     if existing_cpf:
         raise HTTPException(status_code=400, detail="CPF already registered")
 
     password_hash = hash_password(professional.password)
+    
+    # Compute Hashes
+    rg_hash = get_data_hash(professional.rg) if professional.rg else None
 
     db_professional = models.Professional(
         name=professional.name,
         email=professional.email,
         role=professional.role,
         employment_type=professional.employment_type,
-        cpf=professional.cpf,
-        rg=professional.rg,
+        
+        # Encrypt sensitive data + Hash for search
+        cpf=encrypt_data(professional.cpf),
+        cpf_hash=cpf_hash,
+        rg=encrypt_data(professional.rg) if professional.rg else None,
+        rg_hash=rg_hash,
+        
         birth_date=professional.birth_date,
         function_role=professional.function_role,
         admission_date=professional.admission_date,
         contract_validity=professional.contract_validity,
         volunteer_start_date=professional.volunteer_start_date,
-        address=professional.address,
-        bank_data=professional.bank_data,
+        address=encrypt_data(professional.address) if professional.address else None,
+        bank_data=encrypt_data(professional.bank_data) if professional.bank_data else None,
         specialty=professional.specialty,
         registry_number=professional.registry_number,
         cbo=professional.cbo,
@@ -845,6 +1012,14 @@ def create_professional(professional: ProfessionalCreate, db: Session = Depends(
     db.add(db_professional)
     db.commit()
     db.refresh(db_professional)
+
+    # Trigger Supabase creation in background
+    metadata = {
+        "name": professional.name,
+        "role": professional.role
+    }
+    background_tasks.add_task(create_supabase_user, professional.email, professional.password, metadata)
+
     return db_professional
 
 
@@ -876,7 +1051,7 @@ def update_professional(
     existing_cpf = (
         db.query(models.Professional)
         .filter(
-            models.Professional.cpf == professional.cpf,
+            models.Professional.cpf_hash == get_data_hash(professional.cpf),
             models.Professional.id != professional_id,
         )
         .first()
@@ -890,17 +1065,27 @@ def update_professional(
     db_professional.email = professional.email
     db_professional.role = professional.role
     db_professional.employment_type = professional.employment_type
-    db_professional.cpf = professional.cpf
-    db_professional.rg = professional.rg
+    
+    # Encrypt & Hash Update
+    db_professional.cpf = encrypt_data(professional.cpf)
+    db_professional.cpf_hash = get_data_hash(professional.cpf)
+    
+    db_professional.rg = encrypt_data(professional.rg) if professional.rg else None
+    db_professional.rg_hash = get_data_hash(professional.rg) if professional.rg else None
+    
     db_professional.birth_date = professional.birth_date
     db_professional.function_role = professional.function_role
     db_professional.admission_date = professional.admission_date
     db_professional.contract_validity = professional.contract_validity
     db_professional.volunteer_start_date = professional.volunteer_start_date
-    db_professional.address = professional.address
-    db_professional.bank_data = professional.bank_data
+    
+    # Encrypt sensitive updates
+    db_professional.address = encrypt_data(professional.address) if professional.address else None
+    db_professional.bank_data = encrypt_data(professional.bank_data) if professional.bank_data else None
+    
     db_professional.specialty = professional.specialty
     db_professional.registry_number = professional.registry_number
+
     db_professional.cbo = professional.cbo
     db_professional.avatar_url = professional.avatar_url
     
@@ -945,12 +1130,18 @@ def auth_login(payload: AuthLoginRequest, db: Session = Depends(get_db)):
     )
 
 @app.get("/professionals/", response_model=List[Professional])
-def read_professionals(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    try:
-        professionals = db.query(models.Professional).offset(skip).limit(limit).all()
-        return professionals
-    except Exception:
-        return []
+def read_professionals(
+    skip: int = 0,
+    limit: int = 100,
+    email: Optional[EmailStr] = None,
+    db: Session = Depends(get_db)
+):
+    query = db.query(models.Professional)
+    
+    if email:
+        query = query.filter(models.Professional.email == email)
+    
+    return query.offset(skip).limit(limit).all()
 
 
 @app.put("/professionals/{professional_id}/status", response_model=Professional)
@@ -1244,6 +1435,77 @@ def delete_attendance(attendance_id: int, db: Session = Depends(get_db)):
 
 # --- Dashboard & Reports Endpoints ---
 
+@app.get("/admin/dashboard/stats")
+def get_admin_dashboard_stats(db: Session = Depends(get_db)):
+    # 1. Counts
+    total_families = db.query(models.Family).count()
+    total_children = db.query(models.Child).count()
+    
+    # Children with at least one finished attendance
+    attended_children_count = db.query(models.Attendance.child_id)\
+        .filter(models.Attendance.status == "finalizado")\
+        .distinct().count()
+        
+    total_attendances = db.query(models.Attendance).filter(models.Attendance.status == "finalizado").count()
+
+    # 2. Charts Data
+    
+    # Children by Severity
+    severity_query = db.query(
+        models.Child.severity_level,
+        func.count(models.Child.id)
+    ).group_by(models.Child.severity_level).all()
+    
+    children_by_severity = [
+        {"label": row[0] or "Não informado", "value": row[1]} 
+        for row in severity_query
+    ]
+
+    # Families by Vulnerability
+    vul_query = db.query(
+        models.Family.vulnerability_status,
+        func.count(models.Family.id)
+    ).group_by(models.Family.vulnerability_status).all()
+    
+    families_by_vulnerability = [
+        {"label": row[0] or "Não informado", "value": row[1]}
+        for row in vul_query
+    ]
+    
+    # Attendances last 6 months
+    today = date.today()
+    six_months_ago = today - timedelta(days=180)
+    
+    db_url = str(db.get_bind().url)
+    if "postgresql" in db_url:
+        month_func = func.to_char(models.Attendance.end_time, 'YYYY-MM')
+    else:
+        month_func = func.strftime('%Y-%m', models.Attendance.end_time)
+
+    att_query = db.query(
+        month_func.label("month"),
+        func.count(models.Attendance.id)
+    ).filter(
+        models.Attendance.status == "finalizado",
+        models.Attendance.end_time >= six_months_ago
+    ).group_by("month").order_by("month").all()
+    
+    attendances_by_month = [{"month": row[0], "count": row[1]} for row in att_query]
+
+    return {
+        "counts": {
+            "families": total_families,
+            "children": total_children,
+            "attended_children": attended_children_count,
+            "total_attendances": total_attendances
+        },
+        "charts": {
+            "children_severity": children_by_severity,
+            "families_vulnerability": families_by_vulnerability,
+            "attendances_month": attendances_by_month
+        }
+    }
+
 @app.get("/professional/{professional_id}/dashboard")
 def get_professional_dashboard(professional_id: int, db: Session = Depends(get_db)):
     today = date.today()
@@ -1286,6 +1548,40 @@ def get_professional_dashboard(professional_id: int, db: Session = Depends(get_d
             "notes": att.notes
         })
 
+    # Charts Data
+    # 1. Monthly Performance (Last 6 months)
+    six_months_ago = today - timedelta(days=180)
+    
+    # Check if we are using PostgreSQL or SQLite to use correct date function
+    db_url = str(db.get_bind().url)
+    if "postgresql" in db_url:
+        # PostgreSQL
+        month_func = func.to_char(models.Attendance.end_time, 'YYYY-MM')
+    else:
+        # SQLite
+        month_func = func.strftime('%Y-%m', models.Attendance.end_time)
+
+    monthly_query = db.query(
+        month_func.label("month"),
+        func.count(models.Attendance.id)
+    ).filter(
+        models.Attendance.professional_id == professional_id,
+        models.Attendance.status == "finalizado",
+        models.Attendance.end_time >= six_months_ago
+    ).group_by("month").order_by("month").all()
+    
+    monthly_stats = [{"month": row[0], "count": row[1]} for row in monthly_query]
+
+    # 2. Status Distribution (All time or last year)
+    status_query = db.query(
+        models.Attendance.status,
+        func.count(models.Attendance.id)
+    ).filter(
+        models.Attendance.professional_id == professional_id
+    ).group_by(models.Attendance.status).all()
+    
+    status_stats = [{"status": row[0], "count": row[1]} for row in status_query]
+
     return {
         "overview": {
             "today": count_today,
@@ -1293,7 +1589,11 @@ def get_professional_dashboard(professional_id: int, db: Session = Depends(get_d
             "year": count_year,
             "avg_time_minutes": avg_time
         },
-        "timeline": timeline
+        "timeline": timeline,
+        "charts": {
+            "monthly": monthly_stats,
+            "status": status_stats
+        }
     }
 
 @app.get("/reports/production", response_model=List[ProductionReport])

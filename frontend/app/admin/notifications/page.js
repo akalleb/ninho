@@ -21,7 +21,7 @@ function NotificationsPage() {
   const { message } = App.useApp();
   
   // Auth info for "created_by" if needed
-  const { id: professionalId } = useSelector(state => state.auth.login || {});
+  const { professional_id: professionalId } = useSelector(state => state.auth.login || {});
   const targetAudience = Form.useWatch('target_audience', form);
 
   const fetchNotifications = async () => {

@@ -33,8 +33,8 @@ function AddUser() {
           employment_type: data.employment_type || 'effective',
           role: data.role || 'health',
           function_role: data.function_role,
-          bank_data: data.bank_data,
-          address: data.address,
+          bank_data: data.decrypted_bank_data || data.bank_data,
+          address: data.decrypted_address || data.address,
           cbo: data.cbo,
           registry_number: data.registry_number,
         });

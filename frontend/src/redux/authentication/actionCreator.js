@@ -42,6 +42,7 @@ const logOut = () => {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('authUser');
         localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('access_token');
       }
       
       // Remove cookie - try with and without path to ensure it's cleared

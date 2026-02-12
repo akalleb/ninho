@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Form, Input, Button, Descriptions, Divider, message, List, Tag, Timeline, Avatar, Upload, Modal, Select, Tooltip } from 'antd';
+import { Row, Col, Card, Form, Input, Button, Descriptions, Divider, List, Tag, Timeline, Avatar, Upload, Modal, Select, Tooltip, App } from 'antd';
 import { Main } from '../../../../src/container/styled';
 import { Cards } from '../../../../src/components/cards/frame/cards-frame';
 import api from '../../../../src/config/api/axios';
@@ -25,6 +25,7 @@ function AttendancePage({ params }) {
     const [isMedModalOpen, setIsMedModalOpen] = useState(false);
     const [editingMedication, setEditingMedication] = useState(null);
     const router = useRouter();
+    const { message } = App.useApp();
 
     const authState = useSelector((state) => state.auth.login);
     const authUser = typeof authState === 'object' && authState ? authState : null;
@@ -135,7 +136,7 @@ function AttendancePage({ params }) {
         try {
             const values = await medForm.validateFields();
             const professionalId =
-                authUser && authUser.id && authUser.role === 'health' ? authUser.id : null;
+                authUser && authUser.professional_id && authUser.role === 'health' ? authUser.professional_id : null;
 
             if (editingMedication) {
                 await api.put(`/medications/${editingMedication.id}`, values);
@@ -212,7 +213,7 @@ function AttendancePage({ params }) {
         if (!child) return;
         try {
             const professionalId =
-                authUser && authUser.id && authUser.role === 'health' ? authUser.id : null;
+                authUser && authUser.professional_id && authUser.role === 'health' ? authUser.professional_id : null;
 
             let protocolScores = values.protocol_scores || '';
             const biometricsParts = [];

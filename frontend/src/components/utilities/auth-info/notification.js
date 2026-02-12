@@ -20,7 +20,7 @@ function NotificationBox() {
   const [viewAllOpen, setViewAllOpen] = useState(false);
   
   const [popoverOpen, setPopoverOpen] = useState(false);
-  const { id: professionalId, role } = useSelector(state => state.auth.login || {});
+  const { professional_id: professionalId, role } = useSelector(state => state.auth.login || {});
   
   const { rtl } = useSelector(
     state => ({

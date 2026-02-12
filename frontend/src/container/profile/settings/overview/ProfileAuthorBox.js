@@ -40,7 +40,7 @@ function AuthorBox() {
   const handleAvatarUpload = async (options) => {
     const { file, onError, onSuccess } = options;
 
-    if (!authUser?.id) {
+    if (!authUser?.professional_id) {
       notification.error({
         message: 'Usuário não identificado',
         description: 'Faça login novamente para alterar a foto de perfil.',
@@ -54,7 +54,7 @@ function AuthorBox() {
       formData.append('file', file);
 
       const { data } = await api.post(
-        `/professionals/${authUser.id}/avatar`,
+        `/professionals/${authUser.professional_id}/avatar`,
         formData,
         {
           headers: {

@@ -11,7 +11,7 @@ import withAdminLayoutNext from '../../../src/layout/withAdminLayoutNext';
 import dayjs from 'dayjs';
 
 function MyPatientsPage() {
-    const { id: professionalId } = useSelector(state => state.auth.login || {});
+    const { professional_id: professionalId } = useSelector(state => state.auth.login || {});
     const [attendances, setAttendances] = useState([]);
     const [loadingToday, setLoadingToday] = useState(true);
     const [loadingAllPatients, setLoadingAllPatients] = useState(false);
@@ -162,7 +162,7 @@ function MyPatientsPage() {
                                                 </>
                                             }
                                         />
-                                        <Button onClick={() => router.push(`/cuidados/attendance/${item.id}`)}>
+                                        <Button onClick={() => router.push(`/cuidados/children/${item.id}/dashboard`)}>
                                             Ver evoluções
                                         </Button>
                                     </List.Item>

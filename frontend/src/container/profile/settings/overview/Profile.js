@@ -38,7 +38,11 @@ function Profile() {
           setLoading(false);
           return;
         }
-        const { data } = await api.get(`/professionals/${authUser.id}`);
+        if (!authUser.professional_id) {
+          setLoading(false);
+          return;
+        }
+        const { data } = await api.get(`/professionals/${authUser.professional_id}`);
         setProfessional(data);
 
         let roleLabel = 'Colaborador';
@@ -120,7 +124,7 @@ function Profile() {
 
       const authUser = {
         ...currentAuthUser,
-        id: updated.id,
+        professional_id: updated.id,
         name: updated.name,
         email: updated.email,
         role: updated.role,

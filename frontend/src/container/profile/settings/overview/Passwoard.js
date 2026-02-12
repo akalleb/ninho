@@ -15,7 +15,7 @@ function Password() {
 
   const handleSubmit = async (values) => {
     const authUser = typeof authState === 'object' && authState ? authState : null;
-    if (!authUser?.id) {
+    if (!authUser || !authUser.professional_id) {
       notification.error({
         message: 'Usuário não identificado',
         description: 'Faça login novamente para alterar a senha.',
@@ -25,7 +25,7 @@ function Password() {
 
     try {
       setLoading(true);
-      await api.post(`/professionals/${authUser.id}/password`, {
+      await api.post(`/professionals/${authUser.professional_id}/password`, {
         old_password: values.old,
         new_password: values.new,
       });

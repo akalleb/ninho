@@ -11,10 +11,18 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./sql_app.db")
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
+# Supabase
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY", "")
+
 # JWT
 SECRET_KEY = os.getenv("SECRET_KEY", "ninho-secret-key-change-in-production-2026")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
+
+# Encryption
+ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY")
+
 
 # CORS
 ALLOWED_ORIGINS = [

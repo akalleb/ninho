@@ -33,7 +33,11 @@ function Account() {
           setLoading(false);
           return;
         }
-        const { data } = await api.get(`/professionals/${authUser.id}`);
+        if (!authUser.professional_id) {
+          setLoading(false);
+          return;
+        }
+        const { data } = await api.get(`/professionals/${authUser.professional_id}`);
         setProfessional(data);
         form.setFieldsValue({
           name: data.name,
@@ -89,7 +93,7 @@ function Account() {
       setProfessional(updated);
 
       const authUser = {
-        id: updated.id,
+        professional_id: updated.id,
         name: updated.name,
         email: updated.email,
         role: updated.role,

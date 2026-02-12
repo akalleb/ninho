@@ -13,11 +13,44 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
-from .config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
+from .config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, ENCRYPTION_KEY
+from .supabase import verify_supabase_token
 from ..database import get_db
 from .. import models
+from cryptography.fernet import Fernet
+
+# Initialize Fernet with encryption key
+fernet = Fernet(ENCRYPTION_KEY) if ENCRYPTION_KEY else None
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+
+
+def encrypt_data(data: str) -> str:
+    """Encrypt sensitive data"""
+    if not fernet or not data:
+        return data
+    return fernet.encrypt(data.encode()).decode()
+
+
+def decrypt_data(data: str) -> str:
+    """Decrypt sensitive data"""
+    if not fernet or not data:
+        return data
+    try:
+        return fernet.decrypt(data.encode()).decode()
+    except Exception:
+        # If decryption fails (e.g. data was not encrypted), return original
+        return data
+
+
+
+def get_data_hash(data: str) -> str:
+    """Generate deterministic hash for blind indexing (searchable encrypted data)"""
+    if not data:
+        return None
+    # Use HMAC-SHA256 with SECRET_KEY as salt
+    return hmac.new(SECRET_KEY.encode(), data.encode(), hashlib.sha256).hexdigest()
+
 
 
 class TokenData(BaseModel):
@@ -51,7 +84,7 @@ def verify_password(password: str, stored_hash: str) -> bool:
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    """Create JWT access token"""
+    """Create JWT access token (Legacy/Local)"""
     to_encode = data.copy()
     expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
@@ -59,7 +92,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 
 
 def decode_token(token: str) -> Optional[TokenData]:
-    """Decode and validate JWT token"""
+    """Decode and validate JWT token (Legacy/Local)"""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("sub")
@@ -76,20 +109,35 @@ async def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db)
 ) -> models.Professional:
-    """Get current authenticated user from token"""
+    """Get current authenticated user from Supabase token"""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Credenciais inválidas",
         headers={"WWW-Authenticate": "Bearer"},
     )
     
-    token_data = decode_token(token)
-    if token_data is None:
-        raise credentials_exception
+    # 1. Try to verify as Supabase Token
+    supabase_user = verify_supabase_token(token)
     
-    user = db.query(models.Professional).filter(
-        models.Professional.id == token_data.user_id
-    ).first()
+    if supabase_user:
+        # Use email from Supabase to find local user
+        email = supabase_user.email
+        if not email:
+            raise credentials_exception
+            
+        user = db.query(models.Professional).filter(
+            models.Professional.email == email
+        ).first()
+        
+    else:
+        # 2. Fallback to Local Token (for backward compatibility during migration)
+        token_data = decode_token(token)
+        if token_data is None:
+            raise credentials_exception
+            
+        user = db.query(models.Professional).filter(
+            models.Professional.id == token_data.user_id
+        ).first()
     
     if user is None:
         raise credentials_exception

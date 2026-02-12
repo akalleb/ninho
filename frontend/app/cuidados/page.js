@@ -30,7 +30,7 @@ function CareDashboard() {
   const [loading, setLoading] = useState(true);
 
   // Auth Info
-  const { id: professionalId, name: professionalName } = useSelector(state => state.auth.login || {});
+  const { professional_id: professionalId, name: professionalName } = useSelector(state => state.auth.login || {});
 
   useEffect(() => {
     if (!professionalId) return;

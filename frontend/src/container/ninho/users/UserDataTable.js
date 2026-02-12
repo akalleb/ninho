@@ -14,7 +14,7 @@ function UserDataTable() {
   const [loading, setLoading] = useState(true);
   const [viewingProfessional, setViewingProfessional] = useState(null);
   const router = useRouter();
-  const { notification } = App.useApp();
+  const { notification, modal } = App.useApp();
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
   const fetchProfessionals = async () => {
@@ -45,7 +45,7 @@ function UserDataTable() {
   };
 
   const handleDelete = async (id) => {
-    Modal.confirm({
+    modal.confirm({
       title: 'Tem certeza que deseja excluir este colaborador?',
       content: 'Esta ação não pode ser desfeita.',
       okText: 'Sim, Excluir',
@@ -61,7 +61,7 @@ function UserDataTable() {
         } catch (error) {
           notification.error({
             message: 'Erro ao excluir colaborador',
-            description: error.message,
+            description: error.response?.data?.detail || error.message,
           });
         }
       },

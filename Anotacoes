@@ -1,0 +1,36 @@
+1. Backend (API FastAPI)
+
+Já está rodando com:
+
+```
+cd F:\python\ninho\backend
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+- A API fica disponível em: http://localhost:8000
+- Documentação interativa: http://localhost:8000/docs
+2. Frontend (Next.js)
+
+Também está rodando com:
+
+```
+cd F:\python\ninho\frontend
+npm run dev
+```
+- A aplicação web fica em: http://localhost:3000
+Como usar nas próximas vezes
+
+Sempre que quiser subir o sistema completo:
+
+1. Abrir um terminal e rodar o backend:
+   
+   ```
+   cd F:\python\ninho\backend
+   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+   ```
+2. Abrir outro terminal e rodar o frontend:
+   
+   ```
+   cd F:\python\ninho\frontend
+   npm run dev
+   ```
+Com isso você terá tudo funcionando: API no 8000 e painel no 3000.
