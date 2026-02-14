@@ -4,6 +4,7 @@ import { PageHeader } from '../../../components/page-headers/page-headers';
 import { Main } from '../../styled';
 import api from '../../../config/api/axios';
 import { useRouter, useSearchParams } from 'next/navigation';
+import dayjs from 'dayjs';
 
 const { Option } = Select;
 
@@ -33,10 +34,14 @@ function AddUser() {
           employment_type: data.employment_type || 'effective',
           role: data.role || 'health',
           function_role: data.function_role,
-          bank_data: data.decrypted_bank_data || data.bank_data,
-          address: data.decrypted_address || data.address,
+          bank_data: data.bank_data,
+          address: data.address,
           cbo: data.cbo,
           registry_number: data.registry_number,
+          birth_date: data.birth_date ? dayjs(data.birth_date) : null,
+          admission_date: data.admission_date ? dayjs(data.admission_date) : null,
+          contract_validity: data.contract_validity ? dayjs(data.contract_validity) : null,
+          volunteer_start_date: data.volunteer_start_date ? dayjs(data.volunteer_start_date) : null,
         });
         setEmploymentType(data.employment_type || 'effective');
         setUserRole(data.role || 'health');

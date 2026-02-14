@@ -10,6 +10,7 @@ export default function HomePage() {
   const [mounted, setMounted] = useState(false);
   const reduxAuth = useSelector((state) => state?.auth?.login || false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [role, setRole] = useState(null);
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
@@ -19,6 +20,21 @@ export default function HomePage() {
     if (typeof window !== 'undefined') {
       try {
         const storedAuth = localStorage.getItem('isLoggedIn');
+        const storedUser = localStorage.getItem('authUser');
+        if (storedUser) {
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            if (parsedUser && typeof parsedUser === 'object') {
+              setRole(parsedUser.role || null);
+            }
+          } catch (e) {
+            setRole(null);
+          }
+        } else if (typeof reduxAuth === 'object' && reduxAuth) {
+          setRole(reduxAuth.role || null);
+        } else {
+          setRole(null);
+        }
         if (storedAuth === 'true') {
           setIsLoggedIn(true);
         } else {
@@ -27,9 +43,11 @@ export default function HomePage() {
       } catch (e) {
         // localStorage not available, use Redux only
         setIsLoggedIn(!!reduxAuth);
+        setRole(typeof reduxAuth === 'object' && reduxAuth ? reduxAuth.role || null : null);
       }
     } else {
       setIsLoggedIn(!!reduxAuth);
+      setRole(typeof reduxAuth === 'object' && reduxAuth ? reduxAuth.role || null : null);
     }
     setIsChecking(false);
   }, [reduxAuth]);
@@ -38,12 +56,16 @@ export default function HomePage() {
     if (mounted && !isChecking) {
       // Next.js router automatically handles basePath from next.config.js
       if (isLoggedIn) {
-        router.push('/admin/dashboard');
+        if (role === 'health') {
+          router.push('/cuidados');
+        } else if (role) {
+          router.push('/admin/dashboard');
+        }
       } else {
         router.push('/auth');
       }
     }
-  }, [isLoggedIn, isChecking, router, mounted]);
+  }, [isLoggedIn, isChecking, router, mounted, role]);
 
   // Show preloader while checking auth
   if (!mounted) {

@@ -9,6 +9,7 @@ import { Checkbox } from '../../../../components/checkbox/checkbox';
 import Heading from '../../../../components/heading/heading';
 import { getBasePath } from '../../../../utility/getBasePath';
 import api from '../../../../config/api/axios';
+import { NextNavLink } from '../../../../components/utilities/NextLink';
 
 function SignIn() {
   const dispatch = useDispatch();
@@ -28,53 +29,42 @@ function SignIn() {
     typeof isLoggedIn === 'object' && isLoggedIn ? isLoggedIn : null;
 
   useEffect(() => {
-    if (!isLoggedIn) return;
-
-    if (authUser && authUser.role === 'health') {
-      return;
-    }
-
-    const callbackUrl =
-      searchParams.get('callbackUrl') || '/admin/dashboard';
+    if (!authUser) return;
+    if (authUser.role === 'health') return;
+    const callbackUrl = searchParams.get('callbackUrl') || '/admin/dashboard';
     router.push(callbackUrl);
   }, [isLoggedIn, authUser, router, searchParams]);
 
   const handleSubmit = async (values) => {
     setIsSubmitting(true);
+    const email = values.username || values.email;
+    const password = values.password;
+
     try {
       const callbackUrl = searchParams.get('callbackUrl') || '/admin/dashboard';
 
-      // Supabase Login
+      // Supabase Login (primary)
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: values.username || values.email,
-        password: values.password,
+        email,
+        password,
       });
 
       if (error) {
-        message.error(error.message === 'Invalid login credentials' ? 'E-mail ou senha inválidos' : error.message);
+        const messageText =
+          error.message === 'Invalid login credentials'
+            ? 'E-mail ou senha inválidos'
+            : error.message || 'Erro ao autenticar. Tente novamente.';
+        message.error(messageText);
         setIsSubmitting(false);
         return;
       }
 
       if (data.session) {
-        const token = data.session.access_token;
         const user = data.user;
-
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('access_token', token);
-        }
-
         let professional = null;
         try {
-          const profResponse = await api.get('/professionals/', {
-            params: {
-              email: user.email,
-              limit: 1,
-            },
-          });
-          if (Array.isArray(profResponse.data) && profResponse.data.length > 0) {
-            professional = profResponse.data[0];
-          }
+          const profResponse = await api.get('/professionals/me');
+          professional = profResponse.data;
         } catch (e) {
         }
 
@@ -136,7 +126,7 @@ function SignIn() {
         justifyContent: 'center',
         minHeight: '100vh' 
       }}>
-        <Card bordered={false} style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.05)', borderRadius: '12px', padding: '20px' }}>
+        <Card variant="borderless" style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.05)', borderRadius: '12px', padding: '20px' }}>
           <Form 
             name="login" 
             form={form} 
@@ -172,6 +162,7 @@ function SignIn() {
               <Checkbox onChange={onChange} checked={state.checked}>
                 Manter conectado
               </Checkbox>
+              <NextNavLink to="/auth/forgotPassword">Esqueci minha senha</NextNavLink>
             </div>
             
             <Form.Item>
@@ -187,6 +178,10 @@ function SignIn() {
                 {isSubmitting || isLoading ? 'Entrando...' : 'Entrar'}
               </Button>
             </Form.Item>
+            <div style={{ textAlign: 'center', marginTop: 8 }}>
+              <span>Não tem conta? </span>
+              <NextNavLink to="/auth/register">Criar conta</NextNavLink>
+            </div>
           </Form>
         </Card>
       </div>

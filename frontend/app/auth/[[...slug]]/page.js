@@ -8,6 +8,8 @@ import { getBasePath } from '../../../src/utility/getBasePath';
 import Login from '../../../src/container/profile/authentication/overview/SignIn';
 import SignUp from '../../../src/container/profile/authentication/overview/Signup';
 import ForgotPass from '../../../src/container/profile/authentication/overview/ForgotPassword';
+import AuthCallback from '../../../src/container/profile/authentication/overview/AuthCallback';
+import ResetPassword from '../../../src/container/profile/authentication/overview/ResetPassword';
 
 function AuthPageContent({ params }) {
   const pathname = usePathname();
@@ -31,6 +33,10 @@ function AuthPageContent({ params }) {
     Component = SignUp;
   } else if (slug === 'forgotPassword' || pathname.includes('/forgotPassword')) {
     Component = ForgotPass;
+  } else if (slug === 'callback' || pathname.includes('/callback')) {
+    Component = AuthCallback;
+  } else if (slug === 'resetPassword' || pathname.includes('/resetPassword')) {
+    Component = ResetPassword;
   }
 
   // Direct render - no dynamic loading, all components loaded immediately

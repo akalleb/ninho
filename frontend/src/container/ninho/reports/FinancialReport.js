@@ -67,7 +67,7 @@ function FinancialReport({ filters }) {
     }, [filters]);
 
     return (
-        <Card title="Visão Financeira por Fonte de Recurso" bordered={false}>
+        <Card title="Visão Financeira por Fonte de Recurso" variant="borderless">
             {loading ? <div style={{ textAlign: 'center', padding: 20 }}><Spin /></div> : (
                 <Table columns={columns} dataSource={data} pagination={false} />
             )}

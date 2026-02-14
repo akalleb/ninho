@@ -212,7 +212,7 @@ function QueuePage() {
             <Main>
                 <Row gutter={25}>
                     <Col xs={24}>
-                        <Card border={false}>
+                        <Card bordered={false}>
                             <Table 
                                 dataSource={queue} 
                                 columns={columns} 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Form, Input, Select, DatePicker, Button, App, Upload, InputNumber } from 'antd';
+import { Row, Col, Form, Input, Select, DatePicker, Button, App, Upload, InputNumber, Checkbox } from 'antd';
 import FeatherIcon from 'feather-icons-react';
 import { Main } from '../../styled';
 import { Cards } from '../../../components/cards/frame/cards-frame';
@@ -21,6 +21,22 @@ function AddResourceSource() {
   
   const [sourceType, setSourceType] = useState(null);
   const [fileList, setFileList] = useState([]);
+  const [wallets, setWallets] = useState([]);
+
+  useEffect(() => {
+    const loadWallets = async () => {
+      try {
+        const { data } = await api.get('/wallets/');
+        setWallets(data);
+      } catch (error) {
+        notification.error({
+          message: 'Erro ao carregar carteiras',
+          description: error.response?.data?.detail || error.message,
+        });
+      }
+    };
+    loadWallets();
+  }, []);
 
   useEffect(() => {
     const loadSource = async () => {
@@ -156,6 +172,32 @@ function AddResourceSource() {
                       </Select>
                     </Form.Item>
                   </Col>
+                  
+                  <Form.Item
+                    noStyle
+                    shouldUpdate={(prevValues, currentValues) => prevValues.create_initial_revenue !== currentValues.create_initial_revenue}
+                  >
+                    {({ getFieldValue }) => {
+                      const isAutoRevenue = !!getFieldValue('create_initial_revenue');
+                      return (
+                        <Col xs={24} md={12}>
+                          <Form.Item
+                            name="wallet_id"
+                            label="Carteira"
+                            rules={[{ required: isAutoRevenue, message: 'Obrigatório para gerar a Receita automaticamente' }]}
+                          >
+                            <Select placeholder="Selecione a carteira">
+                              {wallets.map(w => (
+                                <Option key={w.id} value={w.id}>
+                                  {w.name} {w.is_restricted ? '(Restrita)' : ''}
+                                </Option>
+                              ))}
+                            </Select>
+                          </Form.Item>
+                        </Col>
+                      );
+                    }}
+                  </Form.Item>
 
                   {/* Condicionais */}
                   {sourceType === 'emenda' && (
@@ -190,14 +232,42 @@ function AddResourceSource() {
                   )}
 
                   <Col xs={24} md={12}>
-                    <Form.Item name="total_value_estimated" label="Valor Total Estimado (R$)">
-                        <InputNumber
-                            style={{ width: '100%' }}
-                            formatter={(value) => `R$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
-                            parser={(value) => value.replace(/R\$\s?|(\.*)/g, '').replace(',', '.')}
-                        />
+                  <Form.Item name="total_value_estimated" label="Valor Total Estimado (R$)" rules={[{ required: true, message: 'Obrigatório' }]}>
+                    <InputNumber
+                      style={{ width: '100%' }}
+                      formatter={(value) => `R$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
+                      parser={(value) => value.replace(/R\$\s?|(\.*)/g, '').replace(',', '.')}
+                    />
+                  </Form.Item>
+                </Col>
+
+                {!isEditMode && (
+                  <Col xs={24}>
+                    <Form.Item name="create_initial_revenue" valuePropName="checked" initialValue={false}>
+                      <Checkbox>Gerar lançamento de Receita (Entrada) automaticamente?</Checkbox>
                     </Form.Item>
                   </Col>
+                )}
+
+                {!isEditMode && (
+                  <Form.Item
+                    noStyle
+                    shouldUpdate={(prevValues, currentValues) => prevValues.create_initial_revenue !== currentValues.create_initial_revenue}
+                  >
+                    {({ getFieldValue }) =>
+                      getFieldValue('create_initial_revenue') ? (
+                        <Col xs={24} md={12}>
+                          <Form.Item name="initial_revenue_status" label="Status da Receita Gerada" initialValue="pendente">
+                            <Select>
+                              <Option value="pendente">Pendente (A receber)</Option>
+                              <Option value="recebido">Recebido (Já em caixa)</Option>
+                            </Select>
+                          </Form.Item>
+                        </Col>
+                      ) : null
+                    }
+                  </Form.Item>
+                )}
 
                   <Col xs={24} md={12}>
                     <Form.Item name="status" label="Status" initialValue="active">

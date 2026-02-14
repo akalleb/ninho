@@ -5,13 +5,15 @@ from sqlalchemy.exc import IntegrityError
 from typing import List, Optional
 from . import models, database
 from .routers import reports
-from pydantic import BaseModel, EmailStr, computed_field
+from pydantic import BaseModel, EmailStr, computed_field, field_validator
 from datetime import datetime, date, timedelta
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi import Request
 from fastapi.staticfiles import StaticFiles
-from .core.supabase import supabase
+from .core.supabase import supabase, supabase_admin
+from .core.config import SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+import httpx
 import os
 import time
 import hashlib
@@ -26,6 +28,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ninho_api")
 
 models.Base.metadata.create_all(bind=database.engine)
+database.ensure_schema()
 
 app = FastAPI(title="Sistema Ninho API")
 
@@ -46,8 +49,12 @@ origins = [
     "http://127.0.0.1:5173",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
-    "*"
 ]
+
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=["*"] # Change this to specific domains in production
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -55,11 +62,6 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-)
-
-app.add_middleware(
-    TrustedHostMiddleware,
-    allowed_hosts=["*"] # Change this to specific domains in production
 )
 
 # Static files for uploaded media
@@ -70,7 +72,18 @@ os.makedirs(AVATAR_DIR, exist_ok=True)
 app.mount("/media", StaticFiles(directory=MEDIA_ROOT), name="media")
 
 
-from .core.security import hash_password, verify_password, create_access_token, oauth2_scheme, verify_supabase_token, encrypt_data, decrypt_data, get_data_hash
+from .core.security import (
+    hash_password,
+    verify_password,
+    create_access_token,
+    oauth2_scheme,
+    verify_supabase_token,
+    encrypt_data,
+    decrypt_data,
+    get_data_hash,
+    get_current_user,
+    get_current_admin,
+)
 
 # Note: hash_password and verify_password in main.py are now deprecated in favor of core.security
 # but kept here if used locally. The import above brings the centralized ones.
@@ -137,33 +150,10 @@ class Family(FamilyBase):
     created_at: datetime
     updated_at: datetime | None = None
     
-    @computed_field
-    def decrypted_cpf(self) -> str | None:
-        return decrypt_data(self.cpf) if self.cpf else None
-        
-    @computed_field
-    def decrypted_rg(self) -> str | None:
-        return decrypt_data(self.rg) if self.rg else None
-        
-    @computed_field
-    def decrypted_nis(self) -> str | None:
-        return decrypt_data(self.nis_responsible) if self.nis_responsible else None
-        
-    @computed_field
-    def decrypted_address(self) -> str | None:
-        return decrypt_data(self.address_full) if self.address_full else None
-        
-    @computed_field
-    def decrypted_phone(self) -> str | None:
-        return decrypt_data(self.phone) if self.phone else None
-        
-    @computed_field
-    def decrypted_email(self) -> str | None:
-        return decrypt_data(self.email) if self.email else None
-        
-    @computed_field
-    def decrypted_observations(self) -> str | None:
-        return decrypt_data(self.family_observations) if self.family_observations else None
+    @field_validator('cpf', 'rg', 'nis_responsible', 'address_full', 'phone', 'email', 'family_observations', mode='before')
+    @classmethod
+    def decrypt_sensitive_data(cls, v):
+        return decrypt_data(v) if v else None
 
     # Computed fields (helper properties)
     @computed_field
@@ -218,21 +208,10 @@ class Child(ChildBase):
     vaccination_card_url: str | None = None
     school_history_url: str | None = None
 
-    @computed_field
-    def decrypted_diagnosis(self) -> str | None:
-        return decrypt_data(self.diagnosis) if self.diagnosis else None
-        
-    @computed_field
-    def decrypted_allergies(self) -> str | None:
-        return decrypt_data(self.allergies) if self.allergies else None
-        
-    @computed_field
-    def decrypted_gestational_history(self) -> str | None:
-        return decrypt_data(self.gestational_history) if self.gestational_history else None
-        
-    @computed_field
-    def decrypted_notes(self) -> str | None:
-        return decrypt_data(self.notes) if self.notes else None
+    @field_validator('diagnosis', 'allergies', 'gestational_history', 'notes', mode='before')
+    @classmethod
+    def decrypt_sensitive_data(cls, v):
+        return decrypt_data(v) if v else None
 
     class Config:
         from_attributes = True
@@ -326,21 +305,10 @@ class Professional(ProfessionalBase):
     id: int
     created_at: datetime
     
-    @computed_field
-    def decrypted_address(self) -> str | None:
-        return decrypt_data(self.address) if self.address else None
-        
-    @computed_field
-    def decrypted_bank_data(self) -> str | None:
-        return decrypt_data(self.bank_data) if self.bank_data else None
-
-    @computed_field
-    def decrypted_cpf(self) -> str | None:
-        return decrypt_data(self.cpf) if self.cpf else None
-        
-    @computed_field
-    def decrypted_rg(self) -> str | None:
-        return decrypt_data(self.rg) if self.rg else None
+    @field_validator('cpf', 'rg', 'address', 'bank_data', mode='before')
+    @classmethod
+    def decrypt_sensitive_data(cls, v):
+        return decrypt_data(v) if v else None
 
     class Config:
         from_attributes = True
@@ -365,6 +333,15 @@ class PasswordChangeRequest(BaseModel):
     old_password: str
     new_password: str
 
+class ProfessionalForceDeleteRequest(BaseModel):
+    confirm: str
+
+class ProfessionalDeleteImpact(BaseModel):
+    id: int
+    name: str
+    email: str
+    references: dict
+
 # --- Resource Source Schemas ---
 class ResourceSourceBase(BaseModel):
     name: str
@@ -379,7 +356,8 @@ class ResourceSourceBase(BaseModel):
     wallet_id: int | None = None
 
 class ResourceSourceCreate(ResourceSourceBase):
-    pass
+    create_initial_revenue: bool = False
+    initial_revenue_status: str | None = "pendente"
 
 class ResourceSourceUpdate(ResourceSourceBase):
     pass
@@ -494,8 +472,8 @@ class Expense(ExpenseBase):
 class RevenueBase(BaseModel):
     amount: float
     received_at: date
-    source_id: int
-    wallet_id: int
+    source_id: int | None = None
+    wallet_id: int | None = None
     payment_method: str
     description: str | None = None
     origin_sphere: str = "privado"
@@ -506,7 +484,8 @@ class RevenueBase(BaseModel):
     observations: str | None = None
 
 class RevenueCreate(RevenueBase):
-    pass
+    source_id: int
+    wallet_id: int
 
 class RevenueUpdate(BaseModel):
     amount: float | None = None
@@ -940,35 +919,196 @@ def list_all_evolutions(
     return query.limit(limit).all()
 
 def create_supabase_user(email: str, password: str, metadata: dict):
-    if not supabase:
-        logger.warning("Supabase client not initialized. Skipping Auth user creation.")
-        return
-
     try:
-        # Tenta criar usuário via signUp (única opção com ANON_KEY)
-        # Nota: Isso pode disparar e-mail de confirmação dependendo da config do Supabase
-        # Para criação admin direta sem confirmação, seria necessário SERVICE_ROLE_KEY
-        response = supabase.auth.sign_up({
-            "email": email,
-            "password": password,
-            "options": {
-                "data": metadata
+        if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
+            target_email = (email or "").strip().lower()
+            if not target_email:
+                raise HTTPException(status_code=400, detail="Email inválido")
+
+            headers = {
+                "apikey": SUPABASE_SERVICE_ROLE_KEY,
+                "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+                "Content-Type": "application/json",
             }
-        })
-        logger.info(f"Supabase user created/registered for {email}")
+
+            def _find_user_id_by_email() -> str | None:
+                try:
+                    def _scan(params: dict) -> str | None:
+                        resp = httpx.get(
+                            f"{SUPABASE_URL}/auth/v1/admin/users",
+                            headers=headers,
+                            params=params,
+                            timeout=15,
+                        )
+                        if resp.status_code != 200:
+                            return None
+                        payload = resp.json()
+                        users = payload.get("users") if isinstance(payload, dict) else None
+                        if not isinstance(users, list):
+                            return None
+                        for u in users:
+                            if not isinstance(u, dict):
+                                continue
+                            if (u.get("email") or "").strip().lower() == target_email and u.get("id"):
+                                return u["id"]
+                        return None
+
+                    user_id = _scan({"page": 1, "per_page": 200, "filter": target_email})
+                    if user_id:
+                        return user_id
+
+                    for page in range(1, 11):
+                        user_id = _scan({"page": page, "per_page": 200})
+                        if user_id:
+                            return user_id
+                    return None
+                except Exception:
+                    return None
+
+            def _update_user(user_id: str) -> None:
+                resp = httpx.put(
+                    f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}",
+                    headers=headers,
+                    json={"password": password, "email_confirm": True, "user_metadata": metadata},
+                    timeout=15,
+                )
+                if resp.status_code not in (200, 201):
+                    detail = ""
+                    try:
+                        detail = json.dumps(resp.json())
+                    except Exception:
+                        detail = resp.text or ""
+                    raise HTTPException(status_code=400, detail=f"Supabase update_user falhou ({resp.status_code}). {detail}")
+
+            user_id = _find_user_id_by_email()
+            if user_id:
+                _update_user(user_id)
+                logger.info(f"Supabase user updated (admin) for {target_email}")
+                return
+
+            create_resp = httpx.post(
+                f"{SUPABASE_URL}/auth/v1/admin/users",
+                headers=headers,
+                json={"email": target_email, "password": password, "email_confirm": True, "user_metadata": metadata},
+                timeout=15,
+            )
+            if create_resp.status_code in (200, 201):
+                logger.info(f"Supabase user created (admin) for {target_email}")
+                return
+
+            message = ""
+            try:
+                message = json.dumps(create_resp.json())
+            except Exception:
+                message = create_resp.text or ""
+
+            if create_resp.status_code in (400, 409, 422):
+                user_id = _find_user_id_by_email()
+                if user_id:
+                    _update_user(user_id)
+                    logger.info(f"Supabase user updated (admin) for {target_email}")
+                    return
+
+            raise HTTPException(
+                status_code=400,
+                detail=f"Supabase create_user falhou ({create_resp.status_code}). {message}",
+            )
+
+        if not supabase:
+            logger.warning("Supabase client not initialized. Skipping Auth user creation.")
+            return
+
+        supabase.auth.sign_up(
+            {
+                "email": email,
+                "password": password,
+                "options": {"data": metadata},
+            }
+        )
+        logger.info(f"Supabase user created (signup) for {email}")
     except Exception as e:
-        # Não bloqueia o fluxo se falhar (ex: usuário já existe)
         logger.error(f"Failed to create Supabase user: {e}")
+        raise HTTPException(status_code=400, detail="Não foi possível criar/atualizar o usuário no Supabase Auth. Verifique se o e-mail já existe no Supabase.")
+
+
+def delete_supabase_auth_user(email: str) -> bool:
+    if not (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY):
+        return False
+
+    target_email = (email or "").strip().lower()
+    if not target_email:
+        return False
+
+    headers = {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+        "Content-Type": "application/json",
+    }
+
+    def _scan(params: dict) -> str | None:
+        resp = httpx.get(
+            f"{SUPABASE_URL}/auth/v1/admin/users",
+            headers=headers,
+            params=params,
+            timeout=15,
+        )
+        if resp.status_code != 200:
+            return None
+        payload = resp.json()
+        users = payload.get("users") if isinstance(payload, dict) else None
+        if not isinstance(users, list):
+            return None
+        for u in users:
+            if not isinstance(u, dict):
+                continue
+            if (u.get("email") or "").strip().lower() == target_email and u.get("id"):
+                return u["id"]
+        return None
+
+    user_id = None
+    try:
+        user_id = _scan({"page": 1, "per_page": 200, "filter": target_email}) or None
+        if not user_id:
+            for page in range(1, 11):
+                user_id = _scan({"page": page, "per_page": 200}) or None
+                if user_id:
+                    break
+    except Exception:
+        user_id = None
+
+    if not user_id:
+        return False
+
+    resp = httpx.delete(
+        f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}",
+        headers=headers,
+        timeout=15,
+    )
+    if resp.status_code in (200, 202, 204):
+        return True
+
+    detail = ""
+    try:
+        detail = json.dumps(resp.json())
+    except Exception:
+        detail = resp.text or ""
+    logger.error(f"Supabase delete_user falhou ({resp.status_code}) para {target_email}: {detail}")
+    return False
 
 # --- Professionals Endpoints ---
 @app.post("/professionals/", response_model=Professional)
 def create_professional(
     professional: ProfessionalCreate, 
     background_tasks: BackgroundTasks,
+    current_user: models.Professional = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
-    # Check if Email or CPF already exists
-    existing_email = db.query(models.Professional).filter(models.Professional.email == professional.email).first()
+    email_normalized = professional.email.strip().lower()
+    password_plain = (professional.password or "").strip()
+    if len(password_plain) < 6:
+        raise HTTPException(status_code=400, detail="Senha inválida (mínimo 6 caracteres).")
+
+    existing_email = db.query(models.Professional).filter(models.Professional.email == email_normalized).first()
     if existing_email:
         raise HTTPException(status_code=400, detail="Email already registered")
     
@@ -978,14 +1118,18 @@ def create_professional(
     if existing_cpf:
         raise HTTPException(status_code=400, detail="CPF already registered")
 
-    password_hash = hash_password(professional.password)
+    password_hash = hash_password(password_plain)
     
     # Compute Hashes
     rg_hash = get_data_hash(professional.rg) if professional.rg else None
 
+    allowed_roles = {"admin", "operational", "health"}
+    if professional.role not in allowed_roles:
+        raise HTTPException(status_code=400, detail="Role inválida")
+
     db_professional = models.Professional(
         name=professional.name,
-        email=professional.email,
+        email=email_normalized,
         role=professional.role,
         employment_type=professional.employment_type,
         
@@ -1009,23 +1153,30 @@ def create_professional(
         avatar_url=professional.avatar_url,
         password_hash=password_hash,
     )
-    db.add(db_professional)
-    db.commit()
-    db.refresh(db_professional)
-
-    # Trigger Supabase creation in background
     metadata = {
         "name": professional.name,
         "role": professional.role
     }
-    background_tasks.add_task(create_supabase_user, professional.email, professional.password, metadata)
-
-    return db_professional
+    try:
+        create_supabase_user(email_normalized, password_plain, metadata)
+        db.add(db_professional)
+        db.commit()
+        db.refresh(db_professional)
+        return db_professional
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Erro ao criar colaborador.")
 
 
 @app.put("/professionals/{professional_id}", response_model=Professional)
 def update_professional(
-    professional_id: int, professional: ProfessionalUpdate, db: Session = Depends(get_db)
+    professional_id: int,
+    professional: ProfessionalUpdate,
+    current_user: models.Professional = Depends(get_current_admin),
+    db: Session = Depends(get_db),
 ):
     db_professional = (
         db.query(models.Professional)
@@ -1035,14 +1186,20 @@ def update_professional(
     if db_professional is None:
         raise HTTPException(status_code=404, detail="Professional not found")
 
-    existing_email = (
-        db.query(models.Professional)
-        .filter(
-            models.Professional.email == professional.email,
-            models.Professional.id != professional_id,
+    email_normalized = professional.email.strip().lower() if professional.email else None
+
+    if email_normalized:
+        existing_email = (
+            db.query(models.Professional)
+            .filter(
+                models.Professional.email == email_normalized,
+                models.Professional.id != professional_id,
+            )
+            .first()
         )
-        .first()
-    )
+    else:
+        existing_email = None
+
     if existing_email:
         raise HTTPException(
             status_code=400, detail="Email já está em uso por outro colaborador"
@@ -1062,7 +1219,11 @@ def update_professional(
         )
 
     db_professional.name = professional.name
-    db_professional.email = professional.email
+    if email_normalized:
+        db_professional.email = email_normalized
+    allowed_roles = {"admin", "operational", "health"}
+    if professional.role not in allowed_roles:
+        raise HTTPException(status_code=400, detail="Role inválida")
     db_professional.role = professional.role
     db_professional.employment_type = professional.employment_type
     
@@ -1097,7 +1258,20 @@ def update_professional(
     db_professional.skills = professional.skills
 
     if professional.password:
-        db_professional.password_hash = hash_password(professional.password)
+        password_plain = (professional.password or "").strip()
+        if len(password_plain) < 6:
+            raise HTTPException(status_code=400, detail="Senha inválida (mínimo 6 caracteres).")
+        db_professional.password_hash = hash_password(password_plain)
+        metadata = {
+            "name": db_professional.name,
+            "role": db_professional.role,
+        }
+        try:
+            create_supabase_user(db_professional.email, password_plain, metadata)
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(status_code=400, detail="Não foi possível sincronizar a senha no Supabase Auth.")
 
     db.commit()
     db.refresh(db_professional)
@@ -1106,16 +1280,18 @@ def update_professional(
 
 @app.post("/auth/login", response_model=AuthUser)
 def auth_login(payload: AuthLoginRequest, db: Session = Depends(get_db)):
+    email_normalized = payload.email.strip().lower()
+
     professional = (
         db.query(models.Professional)
-        .filter(models.Professional.email == payload.email)
+        .filter(models.Professional.email == email_normalized)
         .first()
     )
     if professional is None or not professional.password_hash:
         raise HTTPException(status_code=401, detail="Credenciais inválidas")
 
     if professional.status != "active":
-        raise HTTPException(status_code=403, detail="Usuário inativo")
+        raise HTTPException(status_code=401, detail="Credenciais inválidas")
 
     if not verify_password(payload.password, professional.password_hash):
         raise HTTPException(status_code=401, detail="Credenciais inválidas")
@@ -1134,6 +1310,7 @@ def read_professionals(
     skip: int = 0,
     limit: int = 100,
     email: Optional[EmailStr] = None,
+    current_user: models.Professional = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
     query = db.query(models.Professional)
@@ -1144,9 +1321,19 @@ def read_professionals(
     return query.offset(skip).limit(limit).all()
 
 
+@app.get("/professionals/me", response_model=Professional)
+def read_my_profile(
+    current_user: models.Professional = Depends(get_current_user),
+):
+    return current_user
+
+
 @app.put("/professionals/{professional_id}/status", response_model=Professional)
 def update_professional_status(
-    professional_id: int, status: ProfessionalStatusUpdate, db: Session = Depends(get_db)
+    professional_id: int,
+    status: ProfessionalStatusUpdate,
+    current_user: models.Professional = Depends(get_current_admin),
+    db: Session = Depends(get_db),
 ):
     professional = (
         db.query(models.Professional)
@@ -1165,8 +1352,11 @@ def update_professional_status(
 def change_professional_password(
     professional_id: int,
     payload: PasswordChangeRequest,
+    current_user: models.Professional = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    if current_user.id != professional_id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Acesso não autorizado")
     professional = (
         db.query(models.Professional)
         .filter(models.Professional.id == professional_id)
@@ -1183,32 +1373,147 @@ def change_professional_password(
     return None
 
 @app.get("/professionals/{professional_id}", response_model=Professional)
-def read_professional(professional_id: int, db: Session = Depends(get_db)):
+def read_professional(
+    professional_id: int,
+    current_user: models.Professional = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
     professional = db.query(models.Professional).filter(models.Professional.id == professional_id).first()
     if professional is None:
         raise HTTPException(status_code=404, detail="Professional not found")
     return professional
 
-@app.delete("/professionals/{professional_id}", status_code=204)
-def delete_professional(professional_id: int, db: Session = Depends(get_db)):
+@app.delete("/professionals/{professional_id}")
+def delete_professional(
+    professional_id: int,
+    current_user: models.Professional = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
     professional = db.query(models.Professional).filter(models.Professional.id == professional_id).first()
     if professional is None:
         raise HTTPException(status_code=404, detail="Professional not found")
     try:
+        target_email = professional.email
         db.delete(professional)
         db.commit()
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=400, detail="Não é possível excluir este profissional pois existem atendimentos vinculados a ele.")
-    return None
+    auth_deleted = False
+    try:
+        auth_deleted = delete_supabase_auth_user(target_email)
+    except Exception:
+        auth_deleted = False
+    return {"message": "Colaborador excluído com sucesso", "auth_deleted": auth_deleted}
+
+
+@app.get("/professionals/{professional_id}/delete-impact", response_model=ProfessionalDeleteImpact)
+def get_professional_delete_impact(
+    professional_id: int,
+    current_user: models.Professional = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    professional = db.query(models.Professional).filter(models.Professional.id == professional_id).first()
+    if professional is None:
+        raise HTTPException(status_code=404, detail="Professional not found")
+
+    references = {
+        "attendances": db.query(models.Attendance).filter(models.Attendance.professional_id == professional_id).count(),
+        "evolutions": db.query(models.MultidisciplinaryEvolution).filter(models.MultidisciplinaryEvolution.professional_id == professional_id).count(),
+        "resource_sources_created": db.query(models.ResourceSource).filter(models.ResourceSource.created_by_id == professional_id).count(),
+        "wallets_created": db.query(models.Wallet).filter(models.Wallet.created_by_id == professional_id).count(),
+        "wallets_target": db.query(models.Wallet).filter(models.Wallet.target_professional_id == professional_id).count(),
+        "revenues_created": db.query(models.Revenue).filter(models.Revenue.created_by_id == professional_id).count(),
+        "expenses_created": db.query(models.Expense).filter(models.Expense.created_by_id == professional_id).count(),
+        "notifications_created": db.query(models.Notification).filter(models.Notification.created_by_id == professional_id).count(),
+        "notifications_target": db.query(models.Notification).filter(models.Notification.target_professional_id == professional_id).count(),
+    }
+
+    return ProfessionalDeleteImpact(
+        id=professional.id,
+        name=professional.name,
+        email=professional.email,
+        references=references,
+    )
+
+
+@app.post("/professionals/{professional_id}/force-delete")
+def force_delete_professional(
+    professional_id: int,
+    payload: ProfessionalForceDeleteRequest,
+    current_user: models.Professional = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    professional = db.query(models.Professional).filter(models.Professional.id == professional_id).first()
+    if professional is None:
+        raise HTTPException(status_code=404, detail="Professional not found")
+
+    expected = (professional.email or "").strip().lower()
+    provided = (payload.confirm or "").strip().lower()
+    if not expected or provided != expected:
+        raise HTTPException(status_code=400, detail="Confirmação inválida. Digite o e-mail do colaborador para confirmar a exclusão.")
+
+    if professional.role == "admin":
+        remaining_admins = (
+            db.query(models.Professional)
+            .filter(models.Professional.role == "admin", models.Professional.id != professional_id, models.Professional.status == "active")
+            .count()
+        )
+        if remaining_admins == 0:
+            raise HTTPException(status_code=400, detail="Não é possível excluir o último administrador ativo do sistema.")
+
+    try:
+        target_email = professional.email
+        db.query(models.Attendance).filter(models.Attendance.professional_id == professional_id).update(
+            {models.Attendance.professional_id: None}, synchronize_session=False
+        )
+        db.query(models.MultidisciplinaryEvolution).filter(models.MultidisciplinaryEvolution.professional_id == professional_id).update(
+            {models.MultidisciplinaryEvolution.professional_id: None}, synchronize_session=False
+        )
+        db.query(models.ResourceSource).filter(models.ResourceSource.created_by_id == professional_id).update(
+            {models.ResourceSource.created_by_id: None}, synchronize_session=False
+        )
+        db.query(models.Wallet).filter(models.Wallet.created_by_id == professional_id).update(
+            {models.Wallet.created_by_id: None}, synchronize_session=False
+        )
+        db.query(models.Wallet).filter(models.Wallet.target_professional_id == professional_id).update(
+            {models.Wallet.target_professional_id: None}, synchronize_session=False
+        )
+        db.query(models.Revenue).filter(models.Revenue.created_by_id == professional_id).update(
+            {models.Revenue.created_by_id: None}, synchronize_session=False
+        )
+        db.query(models.Expense).filter(models.Expense.created_by_id == professional_id).update(
+            {models.Expense.created_by_id: None}, synchronize_session=False
+        )
+        db.query(models.Notification).filter(models.Notification.created_by_id == professional_id).update(
+            {models.Notification.created_by_id: None}, synchronize_session=False
+        )
+        db.query(models.Notification).filter(models.Notification.target_professional_id == professional_id).update(
+            {models.Notification.target_professional_id: None}, synchronize_session=False
+        )
+
+        db.delete(professional)
+        db.commit()
+        auth_deleted = False
+        try:
+            auth_deleted = delete_supabase_auth_user(target_email)
+        except Exception:
+            auth_deleted = False
+        return {"message": "Colaborador excluído com sucesso", "auth_deleted": auth_deleted}
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Não foi possível excluir este colaborador devido a vínculos no banco.")
 
 
 @app.post("/professionals/{professional_id}/avatar", response_model=Professional)
 async def upload_professional_avatar(
     professional_id: int,
     file: UploadFile = File(...),
+    current_user: models.Professional = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    if current_user.id != professional_id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Acesso não autorizado")
     professional = (
         db.query(models.Professional)
         .filter(models.Professional.id == professional_id)
@@ -1235,8 +1540,11 @@ async def upload_professional_avatar(
 async def upload_professional_cover(
     professional_id: int,
     file: UploadFile = File(...),
+    current_user: models.Professional = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    if current_user.id != professional_id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Acesso não autorizado")
     professional = (
         db.query(models.Professional)
         .filter(models.Professional.id == professional_id)
@@ -1623,8 +1931,44 @@ def get_production_report(
 # --- Resource Sources Endpoints ---
 @app.post("/resource-sources/", response_model=ResourceSource)
 def create_resource_source(source: ResourceSourceCreate, db: Session = Depends(get_db)):
-    db_source = models.ResourceSource(**source.model_dump())
+    if source.create_initial_revenue:
+        if not source.wallet_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Selecione uma Carteira para gerar a Receita automaticamente."
+            )
+        if not source.total_value_estimated or source.total_value_estimated <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Informe um Valor Total Estimado maior que zero para gerar a Receita automaticamente."
+            )
+
+    source_data = source.model_dump(exclude={'create_initial_revenue', 'initial_revenue_status'})
+    db_source = models.ResourceSource(**source_data)
     db.add(db_source)
+    db.flush()
+
+    if source.create_initial_revenue:
+        new_revenue = models.Revenue(
+            description=f"Receita Inicial - {db_source.name}",
+            amount=source.total_value_estimated,
+            received_at=db_source.term_start or date.today(),
+            source_id=db_source.id,
+            wallet_id=db_source.wallet_id,
+            status=source.initial_revenue_status or "pendente",
+            payment_method="transferencia",
+            is_reconciled=False
+        )
+
+        if new_revenue.status in ["recebido", "conciliado"]:
+            new_revenue.is_reconciled = (new_revenue.status == "conciliado")
+            wallet = db.query(models.Wallet).filter(models.Wallet.id == db_source.wallet_id).first()
+            if wallet:
+                wallet.balance += new_revenue.amount
+                wallet.last_updated = datetime.now()
+
+        db.add(new_revenue)
+
     db.commit()
     db.refresh(db_source)
     return db_source

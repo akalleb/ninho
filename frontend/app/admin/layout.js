@@ -18,24 +18,43 @@ export default function AdminLayout({ children }) {
   const basePath = getBasePath();
   const authState = useSelector((state) => state.auth.login);
   const authUser = typeof authState === 'object' && authState ? authState : null;
+  const [localUser, setLocalUser] = useState(null);
   const [status, setStatus] = useState('checking'); // 'checking' | 'allowed' | 'deniedHealth';
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const storedUser = localStorage.getItem('authUser');
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        if (parsedUser && typeof parsedUser === 'object') {
+          setLocalUser(parsedUser);
+          return;
+        }
+      }
+    } catch (e) {
+    }
+    setLocalUser(null);
+  }, [pathname]);
+
+  useEffect(() => {
+    const effectiveUser = localUser || authUser;
+
     // Enquanto não sabemos o usuário (hidratação), mostramos loader
-    if (!authUser) {
+    if (!effectiveUser) {
       setStatus('checking');
       return;
     }
 
     // Se usuário é profissional de saúde, bloqueia conteúdo do /admin
-    if (authUser.role === 'health') {
+    if (effectiveUser.role === 'health') {
       setStatus('deniedHealth');
       return;
     }
 
     // Demais roles têm acesso
     setStatus('allowed');
-  }, [authUser, basePath, pathname]);
+  }, [authUser, localUser, basePath, pathname]);
 
   useEffect(() => {
     if (status === 'deniedHealth') {

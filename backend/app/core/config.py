@@ -14,6 +14,7 @@ if DATABASE_URL.startswith("postgres://"):
 # Supabase
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY", "")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
 
 # JWT
 SECRET_KEY = os.getenv("SECRET_KEY", "ninho-secret-key-change-in-production-2026")

@@ -38,7 +38,7 @@ function BiCharts({ filters }) {
     <div style={{ marginBottom: 25 }}>
       <Row gutter={25}>
         <Col xs={24} md={12}>
-            <Card title="Produtividade por Profissional" bordered={false}>
+            <Card title="Produtividade por Profissional" variant="borderless">
                 {loading ? <div style={{ textAlign: 'center', padding: 50 }}><Spin /></div> : (
                     <ResponsiveContainer width="100%" height={300}>
                         <BarChart data={data}>
@@ -54,7 +54,7 @@ function BiCharts({ filters }) {
             </Card>
         </Col>
          <Col xs={24} md={12}>
-            <Card title="Evolução de Atendimentos" bordered={false}>
+            <Card title="Evolução de Atendimentos" variant="borderless">
                 {loading ? <div style={{ textAlign: 'center', padding: 50 }}><Spin /></div> : (
                  <ResponsiveContainer width="100%" height={300}>
                     <LineChart data={lineData}>

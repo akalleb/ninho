@@ -29,7 +29,7 @@ function Demographics({ filters }) {
     return (
         <Row gutter={25}>
              <Col xs={24} md={12}>
-                <Card title="Distribuição por Diagnóstico (CID)" bordered={false}>
+                <Card title="Distribuição por Diagnóstico (CID)" variant="borderless">
                     {loading ? <div style={{ textAlign: 'center', padding: 50 }}><Spin /></div> : (
                         <ResponsiveContainer width="100%" height={300}>
                             <PieChart>
@@ -54,7 +54,7 @@ function Demographics({ filters }) {
                 </Card>
              </Col>
              <Col xs={24} md={12}>
-                <Card title="Faixa Etária" bordered={false}>
+                <Card title="Faixa Etária" variant="borderless">
                     {loading ? <div style={{ textAlign: 'center', padding: 50 }}><Spin /></div> : (
                         <ResponsiveContainer width="100%" height={300}>
                             <PieChart>
@@ -80,7 +80,7 @@ function Demographics({ filters }) {
                 </Card>
              </Col>
              <Col xs={24}>
-                 <Card title="Mapa de Calor (Geolocalização)" bordered={false} style={{ marginTop: 25 }}>
+                 <Card title="Mapa de Calor (Geolocalização)" variant="borderless" style={{ marginTop: 25 }}>
                      <div style={{ height: 400, background: '#f0f2f5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
                          <h3>Mapa de Distribuição de Famílias</h3>
                          <p>Visualização geográfica por bairro (Angicos/RN)</p>

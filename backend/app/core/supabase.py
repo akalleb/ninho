@@ -1,5 +1,5 @@
 from supabase import create_client, Client
-from .config import SUPABASE_URL, SUPABASE_KEY
+from .config import SUPABASE_URL, SUPABASE_KEY, SUPABASE_SERVICE_ROLE_KEY
 
 # Initialize Supabase client
 # Note: In a real production environment, you might want to handle initialization errors
@@ -12,6 +12,15 @@ try:
 except Exception as e:
     print(f"Error initializing Supabase client: {e}")
     supabase = None
+
+try:
+    if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
+        supabase_admin: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+    else:
+        supabase_admin = None
+except Exception as e:
+    print(f"Error initializing Supabase admin client: {e}")
+    supabase_admin = None
 
 def verify_supabase_token(token: str):
     """

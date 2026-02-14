@@ -72,7 +72,7 @@ function SusExport({ filters }) {
     return (
         <Row gutter={25}>
             <Col xs={24} lg={16}>
-                <Card title="Geração de Arquivos BPA (SIA/SUS)" bordered={false}>
+                <Card title="Geração de Arquivos BPA (SIA/SUS)" variant="borderless">
                     <div style={{ marginBottom: 20, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                          <span>Competência:</span>
                          <Select defaultValue={selectedMonth} style={{ width: 120 }} onChange={setSelectedMonth}>
@@ -128,7 +128,7 @@ function SusExport({ filters }) {
                             Validação de Dados SUS
                         </span>
                     } 
-                    bordered={false}
+                    variant="borderless"
                 >
                     {loading ? <div style={{ textAlign: 'center', padding: 20 }}><Spin /></div> : (
                         <>

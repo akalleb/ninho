@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Table, Button, Modal, App, Drawer, Descriptions, Tag, Avatar, Divider } from 'antd';
+import { Row, Col, Table, Button, Modal, App, Drawer, Descriptions, Tag, Avatar, Divider, Input } from 'antd';
 import FeatherIcon from 'feather-icons-react';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '../../../components/page-headers/page-headers';
@@ -13,9 +13,34 @@ function UserDataTable() {
   const [professionals, setProfessionals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewingProfessional, setViewingProfessional] = useState(null);
+  const [forceDeleteOpen, setForceDeleteOpen] = useState(false);
+  const [forceDeleteTarget, setForceDeleteTarget] = useState(null);
+  const [forceDeleteImpact, setForceDeleteImpact] = useState(null);
+  const [forceDeleteConfirmText, setForceDeleteConfirmText] = useState('');
+  const [forceDeleteLoading, setForceDeleteLoading] = useState(false);
+  const [forceDeleteMode, setForceDeleteMode] = useState('standard');
+  const [forceDeleteReason, setForceDeleteReason] = useState('');
   const router = useRouter();
-  const { notification, modal } = App.useApp();
+  const { notification } = App.useApp();
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+  const getApiErrorMessage = (error) => {
+    const status = error?.response?.status;
+    const data = error?.response?.data;
+    const detail = data?.detail ?? data?.message ?? data?.error;
+
+    if (typeof detail === 'string' && detail.trim()) {
+      return status ? `${detail} (HTTP ${status})` : detail;
+    }
+    if (detail != null) {
+      try {
+        return status ? `${JSON.stringify(detail)} (HTTP ${status})` : JSON.stringify(detail);
+      } catch (e) {
+      }
+    }
+    if (status) return `Erro HTTP ${status} ao comunicar com o servidor.`;
+    return error?.message || 'Falha de rede ou servidor indisponível.';
+  };
 
   const fetchProfessionals = async () => {
     setLoading(true);
@@ -25,7 +50,7 @@ function UserDataTable() {
     } catch (error) {
       notification.error({
         message: 'Erro ao carregar colaboradores',
-        description: error.message,
+        description: getApiErrorMessage(error),
       });
     } finally {
       setLoading(false);
@@ -44,28 +69,89 @@ function UserDataTable() {
     router.push(`/admin/dashboard/users/add-user?id=${id}`);
   };
 
+  const openForceDelete = async (record) => {
+    setForceDeleteTarget(record);
+    setForceDeleteConfirmText('');
+    setForceDeleteImpact(null);
+    setForceDeleteReason('');
+    setForceDeleteMode('standard');
+    setForceDeleteOpen(true);
+  };
+
   const handleDelete = async (id) => {
-    modal.confirm({
-      title: 'Tem certeza que deseja excluir este colaborador?',
-      content: 'Esta ação não pode ser desfeita.',
-      okText: 'Sim, Excluir',
-      okType: 'danger',
-      cancelText: 'Cancelar',
-      onOk: async () => {
-        try {
-          await api.delete(`/professionals/${id}`);
-          notification.success({
-            message: 'Colaborador excluído com sucesso',
-          });
-          fetchProfessionals();
-        } catch (error) {
-          notification.error({
-            message: 'Erro ao excluir colaborador',
-            description: error.response?.data?.detail || error.message,
+    const record = professionals.find((p) => p.id === id);
+    if (!record) return;
+    await openForceDelete(record);
+  };
+
+  const fetchForceDeleteImpact = async (record) => {
+    try {
+      const { data } = await api.get(`/professionals/${record.id}/delete-impact`);
+      setForceDeleteImpact(data);
+    } catch (error) {
+      notification.error({
+        message: 'Erro ao calcular impacto da exclusão',
+        description: getApiErrorMessage(error),
+      });
+    }
+  };
+
+  const submitForceDelete = async () => {
+    if (!forceDeleteTarget) return;
+    setForceDeleteLoading(true);
+    try {
+      if (forceDeleteMode === 'standard') {
+        const resp = await api.delete(`/professionals/${forceDeleteTarget.id}`);
+        const authDeleted = resp?.data?.auth_deleted;
+        notification.success({ message: 'Colaborador excluído com sucesso' });
+        if (authDeleted === false) {
+          notification.warning({
+            message: 'Atenção',
+            description: 'O colaborador foi removido do sistema, mas o usuário ainda pode existir no Supabase Auth.',
           });
         }
-      },
-    });
+        setForceDeleteOpen(false);
+        setForceDeleteTarget(null);
+        setForceDeleteImpact(null);
+        setForceDeleteConfirmText('');
+        setForceDeleteReason('');
+        setForceDeleteMode('standard');
+        fetchProfessionals();
+        return;
+      }
+
+      const resp = await api.post(`/professionals/${forceDeleteTarget.id}/force-delete`, {
+        confirm: forceDeleteConfirmText,
+      });
+      const authDeleted = resp?.data?.auth_deleted;
+      notification.success({ message: 'Colaborador excluído com sucesso' });
+      if (authDeleted === false) {
+        notification.warning({
+          message: 'Atenção',
+          description: 'O colaborador foi removido do sistema, mas o usuário ainda pode existir no Supabase Auth.',
+        });
+      }
+      setForceDeleteOpen(false);
+      setForceDeleteTarget(null);
+      setForceDeleteImpact(null);
+      setForceDeleteConfirmText('');
+      setForceDeleteReason('');
+      setForceDeleteMode('standard');
+      fetchProfessionals();
+    } catch (error) {
+      if (forceDeleteMode === 'standard' && error?.response?.status === 400) {
+        setForceDeleteMode('force');
+        setForceDeleteReason(getApiErrorMessage(error));
+        await fetchForceDeleteImpact(forceDeleteTarget);
+      } else {
+        notification.error({
+          message: forceDeleteMode === 'force' ? 'Não foi possível forçar a exclusão' : 'Erro ao excluir colaborador',
+          description: getApiErrorMessage(error),
+        });
+      }
+    } finally {
+      setForceDeleteLoading(false);
+    }
   };
 
   const handleToggleStatus = async (record) => {
@@ -373,6 +459,77 @@ function UserDataTable() {
             </Cards>
           </Col>
         </Row>
+
+        <Modal
+          title={forceDeleteMode === 'force' ? 'Forçar exclusão do colaborador' : 'Excluir colaborador'}
+          open={forceDeleteOpen}
+          okText={forceDeleteMode === 'force' ? 'Excluir definitivamente' : 'Excluir'}
+          okType="danger"
+          cancelText="Cancelar"
+          onCancel={() => {
+            if (forceDeleteLoading) return;
+            setForceDeleteOpen(false);
+            setForceDeleteTarget(null);
+            setForceDeleteImpact(null);
+            setForceDeleteConfirmText('');
+            setForceDeleteReason('');
+            setForceDeleteMode('standard');
+          }}
+          onOk={submitForceDelete}
+          confirmLoading={forceDeleteLoading}
+          okButtonProps={{
+            disabled:
+              !forceDeleteTarget ||
+              (forceDeleteMode === 'force' &&
+                (forceDeleteConfirmText || '').trim().toLowerCase() !==
+                  (forceDeleteTarget?.email || '').trim().toLowerCase()),
+          }}
+        >
+          <p style={{ marginBottom: 12 }}>
+            Você está prestes a excluir: <strong>{forceDeleteTarget?.name}</strong> ({forceDeleteTarget?.email})
+          </p>
+
+          {forceDeleteMode === 'standard' && (
+            <p style={{ marginBottom: 0 }}>
+              Se houver vínculos (atendimentos, evoluções, etc.), o sistema vai pedir confirmação adicional para forçar a exclusão.
+            </p>
+          )}
+
+          {forceDeleteMode === 'force' && (
+            <>
+              {forceDeleteReason && (
+                <p style={{ marginBottom: 12 }}>
+                  <strong>Motivo:</strong> {forceDeleteReason}
+                </p>
+              )}
+
+              {forceDeleteImpact && (
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontWeight: 600, marginBottom: 8 }}>Impacto estimado</div>
+                  <ul style={{ margin: 0, paddingLeft: 18 }}>
+                    {Object.entries(forceDeleteImpact.references || {}).map(([key, value]) => (
+                      <li key={key}>
+                        {key}: {value}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <Divider style={{ margin: '12px 0' }} />
+              <p style={{ marginBottom: 8 }}>
+                Para confirmar, digite o e-mail do colaborador:{' '}
+                <strong>{forceDeleteTarget?.email}</strong>
+              </p>
+              <Input
+                placeholder="Digite o e-mail para confirmar"
+                value={forceDeleteConfirmText}
+                onChange={(e) => setForceDeleteConfirmText(e.target.value)}
+                disabled={forceDeleteLoading}
+              />
+            </>
+          )}
+        </Modal>
       </Main>
     </>
   );

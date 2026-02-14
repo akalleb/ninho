@@ -27,7 +27,7 @@ function PerformanceMatrix({ filters }) {
     return (
         <Row gutter={25}>
             <Col xs={24} md={6}>
-                <Card bordered={false}>
+                <Card variant="borderless">
                     {loading ? <Spin /> : (
                         <Statistic 
                             title="Agendados" 
@@ -39,7 +39,7 @@ function PerformanceMatrix({ filters }) {
                 </Card>
             </Col>
             <Col xs={24} md={6}>
-                 <Card bordered={false}>
+                 <Card variant="borderless">
                     {loading ? <Spin /> : (
                         <Statistic 
                             title="Finalizados" 
@@ -51,7 +51,7 @@ function PerformanceMatrix({ filters }) {
                 </Card>
             </Col>
              <Col xs={24} md={6}>
-                 <Card bordered={false}>
+                 <Card variant="borderless">
                     {loading ? <Spin /> : (
                         <Statistic 
                             title="Faltas (No-Show)" 
@@ -63,7 +63,7 @@ function PerformanceMatrix({ filters }) {
                 </Card>
             </Col>
              <Col xs={24} md={6}>
-                 <Card bordered={false}>
+                 <Card variant="borderless">
                     {loading ? <Spin /> : (
                         <Statistic 
                             title="Em Espera" 
