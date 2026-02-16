@@ -82,19 +82,13 @@ function AttendancePage({ params }) {
             );
             if (!ids.length) return;
             try {
-                const results = await Promise.all(
-                    ids.map((pid) =>
-                        api
-                            .get(`/professionals/${pid}`)
-                            .then((res) => [pid, res.data])
-                            .catch(() => null)
-                    )
-                );
+                const { data } = await api.get('/professionals/basic');
+                const list = Array.isArray(data) ? data : [];
+                const wanted = new Set(ids);
                 const newMap = {};
-                results.forEach((entry) => {
-                    if (entry && entry[1]) {
-                        const [pid, prof] = entry;
-                        newMap[pid] = prof;
+                list.forEach((prof) => {
+                    if (prof && wanted.has(prof.id)) {
+                        newMap[prof.id] = prof;
                     }
                 });
                 if (Object.keys(newMap).length) {
@@ -484,52 +478,52 @@ function AttendancePage({ params }) {
                                 {evolutions.length === 0 ? (
                                     <p>Nenhuma evolução registrada ainda.</p>
                                 ) : (
-                                    <Timeline mode="left">
-                                        {evolutions.map((evo) => {
+                                    <Timeline
+                                        mode="left"
+                                        items={evolutions.map((evo) => {
                                             const prof = evo.professional_id
                                                 ? professionalMap[evo.professional_id]
                                                 : null;
-                                            return (
-                                                <Timeline.Item
-                                                    key={evo.id}
-                                                    label={dayjs(evo.date_service).format(
-                                                        'DD/MM/YYYY HH:mm'
-                                                    )}
-                                                    color="blue"
-                                                >
-                                                    <p>
-                                                        <strong>{evo.service_type}</strong>
-                                                    </p>
-                                                    {prof && (
+                                            return {
+                                                key: evo.id,
+                                                label: dayjs(evo.date_service).format('DD/MM/YYYY HH:mm'),
+                                                color: 'blue',
+                                                children: (
+                                                    <>
                                                         <p>
-                                                            <small>
-                                                                Profissional: {prof.name}
-                                                                {prof.registry_number
-                                                                    ? ` (${prof.registry_number})`
-                                                                    : ''}
-                                                            </small>
+                                                            <strong>{evo.service_type}</strong>
                                                         </p>
-                                                    )}
-                                                    <p>{evo.evolution_report}</p>
-                                                    {evo.protocol_scores && (
-                                                        <p>
-                                                            <small>
-                                                                Escalas / Avaliação:{' '}
-                                                                {evo.protocol_scores}
-                                                            </small>
-                                                        </p>
-                                                    )}
-                                                    {evo.intermittences && (
-                                                        <p style={{ color: 'red' }}>
-                                                            <small>
-                                                                Intercorrência: {evo.intermittences}
-                                                            </small>
-                                                        </p>
-                                                    )}
-                                                </Timeline.Item>
-                                            );
+                                                        {prof && (
+                                                            <p>
+                                                                <small>
+                                                                    Profissional: {prof.name}
+                                                                    {prof.registry_number
+                                                                        ? ` (${prof.registry_number})`
+                                                                        : ''}
+                                                                </small>
+                                                            </p>
+                                                        )}
+                                                        <p>{evo.evolution_report}</p>
+                                                        {evo.protocol_scores && (
+                                                            <p>
+                                                                <small>
+                                                                    Escalas / Avaliação:{' '}
+                                                                    {evo.protocol_scores}
+                                                                </small>
+                                                            </p>
+                                                        )}
+                                                        {evo.intermittences && (
+                                                            <p style={{ color: 'red' }}>
+                                                                <small>
+                                                                    Intercorrência: {evo.intermittences}
+                                                                </small>
+                                                            </p>
+                                                        )}
+                                                    </>
+                                                ),
+                                            };
                                         })}
-                                    </Timeline>
+                                    />
                                 )}
                             </Cards>
 
@@ -619,7 +613,7 @@ function AttendancePage({ params }) {
                         open={isMedModalOpen}
                         onOk={handleSaveMedication}
                         onCancel={() => setIsMedModalOpen(false)}
-                        destroyOnClose
+                        destroyOnHidden
                     >
                         <Form form={medForm} layout="vertical">
                             <Form.Item

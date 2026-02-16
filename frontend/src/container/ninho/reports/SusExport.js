@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Button, Table, Alert, Select, Spin, message } from 'antd';
+import { Row, Col, Card, Button, Table, Alert, Select, Spin, App } from 'antd';
 import { FileTextOutlined, FileExcelOutlined, WarningOutlined } from '@ant-design/icons';
+import { useRouter } from 'next/navigation';
 import moment from 'moment';
 import api from '../../../config/api/axios';
 import fileSaver from 'file-saver';
@@ -13,12 +14,15 @@ function SusExport({ filters }) {
     const [validationData, setValidationData] = useState([]);
     const [loading, setLoading] = useState(false);
     const [exporting, setExporting] = useState(false);
+    const { message } = App.useApp();
+    const router = useRouter();
 
     useEffect(() => {
         setLoading(true);
         api.get('/reports/validate/sus')
             .then(res => {
-                const data = res.data.map((item, index) => ({
+                const list = Array.isArray(res.data) ? res.data : [];
+                const data = list.map((item, index) => ({
                     key: index,
                     ...item
                 }));
@@ -27,6 +31,22 @@ function SusExport({ filters }) {
             .catch(err => console.error("Erro na validação SUS", err))
             .finally(() => setLoading(false));
     }, []);
+
+    const handleFix = (record) => {
+        if (!record || !record.type || !record.id) {
+            return;
+        }
+
+        if (record.type === 'professional') {
+            router.push(`/admin/dashboard/users/add-user?id=${record.id}`);
+            return;
+        }
+
+        if (record.type === 'child') {
+            router.push(`/admin/children/edit?id=${record.id}`);
+            return;
+        }
+    };
 
     const validationColumns = [
         { title: 'Tipo', dataIndex: 'type', key: 'type' },
@@ -37,14 +57,18 @@ function SusExport({ filters }) {
             key: 'missing_fields', 
             render: tags => (
                 <span style={{ color: '#FF4D4F' }}>
-                    {tags.join(', ')}
+                    {Array.isArray(tags) ? tags.join(', ') : ''}
                 </span>
             ) 
         },
         { 
             title: 'Ação', 
             key: 'action', 
-            render: () => <Button size="small" type="link">Corrigir</Button> 
+            render: (_, record) => (
+                <Button size="small" type="link" onClick={() => handleFix(record)}>
+                    Corrigir
+                </Button>
+            ),
         }
     ];
 
@@ -57,7 +81,6 @@ function SusExport({ filters }) {
                 year: selectedYear
             }
         }).then(res => {
-            // Criar e baixar arquivo
             const blob = new Blob([res.data.content], { type: "text/plain;charset=utf-8" });
             fileSaver.saveAs(blob, res.data.filename);
             message.success(`Arquivo ${type} gerado com sucesso!`);

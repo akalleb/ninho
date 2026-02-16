@@ -4,11 +4,9 @@ import React, { useState, useEffect } from 'react';
 import propTypes from 'prop-types';
 import { useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
-import { getBasePath } from '../../utility/getBasePath';
 
 function ProtectedRoute({ children }) {
   const router = useRouter();
-  const basePath = getBasePath();
   const reduxAuth = useSelector(state => state.auth.login);
   const [isLoggedIn, setIsLoggedIn] = useState(reduxAuth || false);
   const [isChecking, setIsChecking] = useState(true);
@@ -33,10 +31,9 @@ function ProtectedRoute({ children }) {
   
   useEffect(() => {
     if (!isChecking && !isLoggedIn) {
-      const authPath = basePath ? `${basePath}/auth` : '/auth';
-      router.replace(authPath);
+      router.replace('/auth');
     }
-  }, [isLoggedIn, isChecking, router, basePath]);
+  }, [isLoggedIn, isChecking, router]);
   
   if (isChecking || !isLoggedIn) {
     return null; // Will redirect via useEffect

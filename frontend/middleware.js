@@ -1,13 +1,28 @@
 import { NextResponse } from 'next/server';
 
-/**
- * Middleware - Pass-through for client-side authentication
- * Route protection is now handled client-side via ProtectedRoute component
- * No JWT/session validation needed
- */
 export function middleware(req) {
-  // Allow all requests - authentication is handled client-side
-  // The ProtectedRoute component will redirect unauthenticated users
+  const { pathname } = req.nextUrl;
+
+  const isPublic =
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/api') ||
+    pathname === '/' ||
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/favicon.ico');
+
+  if (isPublic) {
+    return NextResponse.next();
+  }
+
+  const token = req.cookies.get('access_token')?.value;
+
+  if (!token) {
+    const url = req.nextUrl.clone();
+    url.pathname = '/auth';
+    url.searchParams.set('callbackUrl', pathname + req.nextUrl.search);
+    return NextResponse.redirect(url);
+  }
+
   return NextResponse.next();
 }
 
@@ -24,4 +39,3 @@ export const config = {
     '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
-

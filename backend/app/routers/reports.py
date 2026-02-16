@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case, desc
 from typing import List, Optional
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from .. import models, database
 from pydantic import BaseModel
 
@@ -91,11 +91,12 @@ def get_productivity_report(
 def get_evolution_report(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
+    limit_months: int = Query(6, ge=1, le=24),
     db: Session = Depends(get_db)
 ):
-    # If no date range, default to last 6 months
     if not start_date:
-        start_date = date.today().replace(day=1, month=date.today().month - 5) if date.today().month > 5 else date(date.today().year - 1, date.today().month + 7, 1)
+        today = date.today()
+        start_date = today - timedelta(days=limit_months * 31)
     if not end_date:
         end_date = date.today()
 
@@ -108,7 +109,7 @@ def get_evolution_report(
         func.date(models.Attendance.scheduled_time) <= end_date
     )
     
-    results = query.all()
+    results = query.limit(5000).all()
     
     # Process in Python
     data = {}
@@ -168,22 +169,21 @@ def get_performance_matrix(
 @router.get("/bi/demographics", response_model=List[DemographicsMetric])
 def get_demographics(
     type: str = Query(..., enum=["diagnosis", "severity", "age"]),
+    max_rows: int = Query(10000, ge=100, le=100000),
     db: Session = Depends(get_db)
 ):
     if type == "diagnosis":
         results = db.query(models.Child.diagnosis, func.count(models.Child.id))\
-            .group_by(models.Child.diagnosis).all()
+            .group_by(models.Child.diagnosis).limit(max_rows).all()
         return [{"category": row[0] or "Sem Diagnóstico", "count": row[1]} for row in results]
         
     elif type == "severity":
         results = db.query(models.Child.severity_level, func.count(models.Child.id))\
-            .group_by(models.Child.severity_level).all()
+            .group_by(models.Child.severity_level).limit(max_rows).all()
         return [{"category": row[0] or "Não Classificado", "count": row[1]} for row in results]
         
     elif type == "age":
-        # Age calculation in SQL is tricky across DBs. Doing in Python for simplicity with small datasets.
-        # For production with large data, use DB specific functions (age() in PG, julianday in SQLite)
-        children = db.query(models.Child).all()
+        children = db.query(models.Child).limit(max_rows).all()
         age_groups = {"0-3": 0, "4-6": 0, "7-12": 0, "13-17": 0, "18+": 0}
         
         today = date.today()

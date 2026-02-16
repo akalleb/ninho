@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import RouteLoader from '../../src/components/route-loader/RouteLoader';
-import { getBasePath } from '../../src/utility/getBasePath';
 
 /**
  * Shared Admin Layout for all /admin routes
@@ -15,7 +14,6 @@ import { getBasePath } from '../../src/utility/getBasePath';
 export default function AdminLayout({ children }) {
   const pathname = usePathname();
   const router = useRouter();
-  const basePath = getBasePath();
   const authState = useSelector((state) => state.auth.login);
   const authUser = typeof authState === 'object' && authState ? authState : null;
   const [localUser, setLocalUser] = useState(null);
@@ -54,13 +52,12 @@ export default function AdminLayout({ children }) {
 
     // Demais roles têm acesso
     setStatus('allowed');
-  }, [authUser, localUser, basePath, pathname]);
+  }, [authUser, localUser, pathname]);
 
   useEffect(() => {
     if (status === 'deniedHealth') {
-      const menuPath = basePath ? `${basePath}/cuidados` : '/cuidados';
       const timer = setTimeout(() => {
-        router.replace(menuPath);
+        router.replace('/cuidados');
       }, 2000);
 
       return () => {
@@ -68,7 +65,7 @@ export default function AdminLayout({ children }) {
       };
     }
     return undefined;
-  }, [status, router, basePath]);
+  }, [status, router]);
 
   if (status === 'checking') {
     return <RouteLoader />;

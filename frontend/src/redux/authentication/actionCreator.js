@@ -45,9 +45,11 @@ const logOut = () => {
         localStorage.removeItem('access_token');
       }
       
-      // Remove cookie - try with and without path to ensure it's cleared
+      // Remove cookies - try with and without path to ensure they're cleared
       Cookies.remove('logedIn', { path: '/' });
       Cookies.remove('logedIn'); // Also try without path option
+      Cookies.remove('access_token', { path: '/' });
+      Cookies.remove('access_token');
       
       dispatch(logoutSuccess(null));
     } catch (err) {
@@ -56,4 +58,36 @@ const logOut = () => {
   };
 };
 
-export { login, logOut };
+const hydrateAuthFromStorage = () => {
+  return async (dispatch) => {
+    try {
+      if (typeof window === 'undefined') return;
+
+      const storedAuth = localStorage.getItem('isLoggedIn');
+      const cookieLoggedIn = Cookies.get('logedIn');
+
+      if (storedAuth === 'true') {
+        const storedUser = localStorage.getItem('authUser');
+        let userData = true;
+        if (storedUser) {
+          try {
+            userData = JSON.parse(storedUser);
+          } catch {
+            userData = true;
+          }
+        }
+        Cookies.set('logedIn', true);
+        dispatch(loginSuccess(userData || true));
+        return;
+      }
+
+      if (cookieLoggedIn) {
+        dispatch(loginSuccess(true));
+      }
+    } catch {
+      // ignore hydration errors
+    }
+  };
+};
+
+export { login, logOut, hydrateAuthFromStorage };

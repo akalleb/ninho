@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Table, Button, Modal, Form, Select, DatePicker, message, Tag, Input, Popconfirm, Tooltip } from 'antd';
+import { Row, Col, Card, Table, Button, Modal, Form, Select, DatePicker, Tag, Input, Popconfirm, Tooltip, App, Alert } from 'antd';
 import FeatherIcon from 'feather-icons-react';
 import { PageHeader } from '../../../src/components/page-headers/page-headers';
 import { Main } from '../../../src/container/styled';
@@ -22,6 +22,7 @@ function QueuePage() {
     const [editingItem, setEditingItem] = useState(null);
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
+    const { message } = App.useApp();
 
     // Fetch Data
     const fetchData = async () => {
@@ -30,7 +31,7 @@ function QueuePage() {
             const [qRes, cRes, pRes, wRes] = await Promise.all([
                 api.get('/queue/'),
                 api.get('/children/'),
-                api.get('/professionals/'),
+                api.get('/professionals/basic'),
                 api.get('/wallets/')
             ]);
             setQueue(qRes.data);
@@ -212,7 +213,7 @@ function QueuePage() {
             <Main>
                 <Row gutter={25}>
                     <Col xs={24}>
-                        <Card bordered={false}>
+                        <Card variant="borderless">
                             <Table 
                                 dataSource={queue} 
                                 columns={columns} 
@@ -255,6 +256,36 @@ function QueuePage() {
                                 <Option key={w.id} value={w.id}>{w.name}</Option>
                             ))}
                         </Select>
+                    </Form.Item>
+                    <Form.Item
+                        noStyle
+                        shouldUpdate={(prev, cur) => prev.wallet_id !== cur.wallet_id}
+                    >
+                        {({ getFieldValue }) => {
+                            const walletId = getFieldValue('wallet_id');
+                            const selectedWallet = wallets.find((w) => w.id === walletId);
+                            if (!selectedWallet?.auto_charge_enabled) return null;
+                            const mode = selectedWallet.auto_charge_mode;
+                            const modeLabel =
+                                mode === 'service_type'
+                                    ? 'por tipo de atendimento'
+                                    : mode === 'professional'
+                                      ? 'por profissional'
+                                      : 'valor fixo por atendimento';
+                            const fallback = selectedWallet.auto_charge_flat_amount != null
+                                ? ` (padrão R$ ${Number(selectedWallet.auto_charge_flat_amount).toFixed(2)})`
+                                : '';
+                            return (
+                                <div style={{ marginBottom: 12 }}>
+                                    <Alert
+                                        type="info"
+                                        showIcon
+                                        message={`Cobrança automática ativa nesta carteira (${modeLabel}${fallback})`}
+                                        description="Ao finalizar o atendimento, o sistema lançará automaticamente uma despesa nesta carteira (ou ficará pendente se não houver saldo)."
+                                    />
+                                </div>
+                            );
+                        }}
                     </Form.Item>
                     <Form.Item name="scheduled_time" label="Data e Hora (Deixe vazio para fila de espera imediata)">
                         <DatePicker showTime format="DD/MM/YYYY HH:mm" style={{ width: '100%' }} />

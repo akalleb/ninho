@@ -6,7 +6,6 @@ import PreventFOUC from './components/PreventFOUC';
 import './critical.css'; // Critical CSS for FOUC prevention
 import '../src/static/css/style.css';
 import 'antd/dist/reset.css';
-import '../src/config/chart';
 
 export const metadata = {
   title: 'Ninho Social',

@@ -21,13 +21,14 @@ function BiCharts({ filters }) {
         api.get('/reports/bi/evolution', { params })
     ])
       .then(([resProd, resEvo]) => {
-        // Mapear retorno { group: 'Nome', count: 10 } para formato do gráfico
-        const chartData = resProd.data.map(item => ({
+        const prodList = Array.isArray(resProd.data) ? resProd.data : [];
+        const evoList = Array.isArray(resEvo.data) ? resEvo.data : [];
+        const chartData = prodList.map(item => ({
             name: item.group,
             atendimentos: item.count
         }));
         setData(chartData);
-        setLineData(resEvo.data);
+        setLineData(evoList);
       })
       .catch(err => console.error("Erro ao carregar dados de BI", err))
       .finally(() => setLoading(false));

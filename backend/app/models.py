@@ -275,6 +275,16 @@ class Wallet(Base):
     agency = Column(String, nullable=True) # Ex: 1234-5
     account_number = Column(String, nullable=True) # Ex: 56789-0
     pix_key = Column(String, nullable=True) # Ex: 12.345.678/0001-90
+
+    auto_charge_enabled = Column(Boolean, default=False)
+    auto_charge_mode = Column(String, nullable=True)
+    auto_charge_flat_amount = Column(Float, nullable=True)
+    auto_charge_service_type_rates = Column(Text, nullable=True)
+    auto_charge_professional_rates = Column(Text, nullable=True)
+    auto_charge_expense_destination = Column(String, nullable=True)
+    auto_charge_expense_description = Column(Text, nullable=True)
+    auto_charge_expense_category_id = Column(Integer, nullable=True)
+    payroll_fixed_staff = Column(Text, nullable=True)
     
     # Audit
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -346,6 +356,10 @@ class Expense(Base):
     # Em um modelo complexo, seria many-to-many. Aqui simplificaremos:
     # Opcional: vincular a uma fonte específica se for recurso carimbado estrito
     source_id = Column(Integer, ForeignKey("resource_sources.id"), nullable=True)
+
+    attendance_id = Column(Integer, ForeignKey("attendances.id"), nullable=True)
+    is_auto_generated = Column(Boolean, default=False)
+    auto_charge_mode = Column(String, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     created_by_id = Column(Integer, ForeignKey("professionals.id"), nullable=True)

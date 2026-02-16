@@ -13,13 +13,13 @@ function Filters({ onFilterChange }) {
 
   useEffect(() => {
     // Carregar Profissionais
-    api.get('/professionals/')
-      .then(res => setProfessionals(res.data))
+    api.get('/professionals/basic')
+      .then(res => setProfessionals(Array.isArray(res.data) ? res.data : []))
       .catch(err => console.error("Erro ao carregar profissionais", err));
 
     // Carregar Carteiras
     api.get('/wallets/')
-      .then(res => setWallets(res.data))
+      .then(res => setWallets(Array.isArray(res.data) ? res.data : []))
       .catch(err => console.error("Erro ao carregar carteiras", err));
   }, []);
 

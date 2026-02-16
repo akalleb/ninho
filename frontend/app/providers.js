@@ -3,15 +3,17 @@
 // IMPORTANT: Import NextAuth patch BEFORE any NextAuth imports
 // This patches fetch/XMLHttpRequest to include base path for NextAuth API calls
 import '../src/utils/nextAuthPatch';
+import '../src/config/chart';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Provider, useSelector } from 'react-redux';
+import { Provider, useDispatch } from 'react-redux';
 import { ConfigProvider, theme as antdTheme, App as AntApp } from 'antd';
 import { ThemeProvider } from 'styled-components';
 // SessionProvider removed - using client-side authentication instead of NextAuth
 // import { SessionProvider } from 'next-auth/react';
 import store from '../src/redux/store';
 import config from '../src/config/config';
+import { hydrateAuthFromStorage } from '../src/redux/authentication/actionCreator';
 
 /**
  * Get base path for NextAuth API calls
@@ -374,11 +376,20 @@ function ThemeWrapper({ children }) {
   );
 }
 
+function AuthHydrator() {
+  const dispatch = useDispatch();
+  useEffect(() => {
+    dispatch(hydrateAuthFromStorage());
+  }, [dispatch]);
+  return null;
+}
+
 export function Providers({ children }) {
   // Using client-side authentication with Redux + localStorage
   // No NextAuth SessionProvider needed
   return (
     <Provider store={store}>
+      <AuthHydrator />
       <ThemeWrapper>{children}</ThemeWrapper>
     </Provider>
   );

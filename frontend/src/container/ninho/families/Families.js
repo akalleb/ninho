@@ -32,6 +32,16 @@ ChartJS.register(
 
 const { Option } = Select;
 
+const normalizeConfirmText = (value) => {
+  if (value == null) return '';
+  return String(value)
+    .normalize('NFKC')
+    .replace(/\u00A0/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+};
+
 function Families() {
   const [families, setFamilies] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -126,7 +136,9 @@ function Families() {
   const handleConfirmDelete = async () => {
     const { family, confirmName } = deleteModal;
     
-    if (confirmName !== family.name_responsible) {
+    const expected = normalizeConfirmText(family?.name_responsible);
+    const provided = normalizeConfirmText(confirmName);
+    if (!expected || provided !== expected) {
       notification.error({ message: 'Nome incorreto para confirmação.' });
       return;
     }
@@ -291,7 +303,10 @@ function Families() {
             key="submit" 
             type="primary" 
             danger 
-            disabled={deleteModal.confirmName !== deleteModal.family?.name_responsible}
+            disabled={
+              normalizeConfirmText(deleteModal.confirmName) !==
+              normalizeConfirmText(deleteModal.family?.name_responsible)
+            }
             onClick={handleConfirmDelete}
           >
             Entendo as consequências, excluir
@@ -300,10 +315,10 @@ function Families() {
       >
         <div style={{ backgroundColor: '#fff1f0', padding: 15, borderRadius: 4, border: '1px solid #ffa39e', marginBottom: 20 }}>
            <p style={{ fontWeight: 'bold', color: '#cf1322' }}>Atenção: Esta ação é irreversível!</p>
-           <p>Isso excluirá permanentemente a família de <strong>{deleteModal.family?.name_responsible}</strong>.</p>
+           <p>Isso excluirá permanentemente a família de <strong>{(deleteModal.family?.name_responsible || '').trim()}</strong>.</p>
            <p>Todos os registros vinculados (<strong>Crianças, Atendimentos, Evoluções, Medicações</strong>) também serão apagados.</p>
         </div>
-        <p>Por favor, digite <strong>{deleteModal.family?.name_responsible}</strong> para confirmar.</p>
+        <p>Por favor, digite <strong>{(deleteModal.family?.name_responsible || '').trim()}</strong> para confirmar.</p>
         <Input 
             value={deleteModal.confirmName}
             onChange={(e) => setDeleteModal({ ...deleteModal, confirmName: e.target.value })}

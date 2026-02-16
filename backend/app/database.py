@@ -30,6 +30,13 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 def ensure_schema():
+    if engine.dialect.name == "sqlite":
+        with engine.begin() as connection:
+            cols = connection.execute(text("PRAGMA table_info(wallets)")).fetchall()
+            existing = {row[1] for row in cols}
+            if "payroll_fixed_staff" not in existing:
+                connection.execute(text("ALTER TABLE wallets ADD COLUMN payroll_fixed_staff TEXT"))
+        return
     if engine.dialect.name != "postgresql":
         return
     statements = [
@@ -42,6 +49,18 @@ def ensure_schema():
         "ALTER TABLE IF EXISTS revenues ADD COLUMN IF NOT EXISTS tracking_docs_url TEXT",
         "ALTER TABLE IF EXISTS revenues ADD COLUMN IF NOT EXISTS tracking_code VARCHAR",
         "ALTER TABLE IF EXISTS revenues ADD COLUMN IF NOT EXISTS observations TEXT",
+        "ALTER TABLE IF EXISTS wallets ADD COLUMN IF NOT EXISTS auto_charge_enabled BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE IF EXISTS wallets ADD COLUMN IF NOT EXISTS auto_charge_mode VARCHAR",
+        "ALTER TABLE IF EXISTS wallets ADD COLUMN IF NOT EXISTS auto_charge_flat_amount DOUBLE PRECISION",
+        "ALTER TABLE IF EXISTS wallets ADD COLUMN IF NOT EXISTS auto_charge_service_type_rates TEXT",
+        "ALTER TABLE IF EXISTS wallets ADD COLUMN IF NOT EXISTS auto_charge_professional_rates TEXT",
+        "ALTER TABLE IF EXISTS wallets ADD COLUMN IF NOT EXISTS auto_charge_expense_destination VARCHAR",
+        "ALTER TABLE IF EXISTS wallets ADD COLUMN IF NOT EXISTS auto_charge_expense_description TEXT",
+        "ALTER TABLE IF EXISTS wallets ADD COLUMN IF NOT EXISTS auto_charge_expense_category_id INTEGER",
+        "ALTER TABLE IF EXISTS wallets ADD COLUMN IF NOT EXISTS payroll_fixed_staff TEXT",
+        "ALTER TABLE IF EXISTS expenses ADD COLUMN IF NOT EXISTS attendance_id INTEGER",
+        "ALTER TABLE IF EXISTS expenses ADD COLUMN IF NOT EXISTS is_auto_generated BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE IF EXISTS expenses ADD COLUMN IF NOT EXISTS auto_charge_mode VARCHAR",
     ]
     with engine.begin() as connection:
         for statement in statements:

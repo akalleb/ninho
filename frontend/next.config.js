@@ -4,6 +4,9 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
 const nextConfig = {
   reactStrictMode: false, // Disabled to prevent double renders in development
   swcMinify: true,
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   // Use basePath if set, otherwise empty (works at root)
   basePath: basePath,
   assetPrefix: basePath,
@@ -23,7 +26,6 @@ const nextConfig = {
       '@ant-design/pro-components',
       'react-icons',
       'feather-icons-react',
-      'recharts',
       'apexcharts',
       'react-apexcharts',
       'react-beautiful-dnd',

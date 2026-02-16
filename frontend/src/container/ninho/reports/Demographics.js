@@ -18,9 +18,10 @@ function Demographics({ filters }) {
             api.get('/reports/bi/demographics', { params: { type: 'diagnosis' } }),
             api.get('/reports/bi/demographics', { params: { type: 'age' } })
         ]).then(([resDiag, resAge]) => {
-            // Map API response { category: 'X', count: 10 } to { name: 'X', value: 10 }
-            setDataDiagnosis(resDiag.data.map(d => ({ name: d.category, value: d.count })));
-            setDataAge(resAge.data.map(d => ({ name: d.category, value: d.count })));
+            const diagList = Array.isArray(resDiag.data) ? resDiag.data : [];
+            const ageList = Array.isArray(resAge.data) ? resAge.data : [];
+            setDataDiagnosis(diagList.map(d => ({ name: d.category, value: d.count })));
+            setDataAge(ageList.map(d => ({ name: d.category, value: d.count })));
         }).catch(err => console.error("Erro ao carregar demografia", err))
           .finally(() => setLoading(false));
 

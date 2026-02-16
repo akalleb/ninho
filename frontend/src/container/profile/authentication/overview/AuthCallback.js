@@ -6,14 +6,14 @@ import { supabase } from '../../../../config/supabase';
 import api from '../../../../config/api/axios';
 import { login } from '../../../../redux/authentication/actionCreator';
 import { AuthWrapper } from './style';
-import { getBasePath } from '../../../../utility/getBasePath';
+import { NextNavLink } from '../../../../components/utilities/NextLink';
+import Cookies from 'js-cookie';
 
 function AuthCallback() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const dispatch = useDispatch();
   const { message } = App.useApp();
-  const basePath = getBasePath();
   const [status, setStatus] = useState('loading');
 
   useEffect(() => {
@@ -62,9 +62,14 @@ function AuthCallback() {
 
         await dispatch(login(authUser));
 
+        const sessionInfo = await supabase.auth.getSession();
+        const accessToken = sessionInfo.data?.session?.access_token;
+        if (accessToken) {
+          Cookies.set('access_token', accessToken);
+        }
+
         if (finalRole === 'health') {
-          const cuidadosPath = basePath ? `${basePath}/cuidados` : '/cuidados';
-          router.replace(cuidadosPath);
+          router.replace('/cuidados');
         } else {
           router.replace('/admin/dashboard');
         }
@@ -74,14 +79,14 @@ function AuthCallback() {
       }
     };
     run();
-  }, [dispatch, message, router, searchParams, basePath]);
+  }, [dispatch, message, router, searchParams]);
 
   if (status === 'error') {
     return (
       <AuthWrapper>
         <div className="auth-contents" style={{ textAlign: 'center' }}>
           <p style={{ marginBottom: 8 }}>Não foi possível concluir a autenticação.</p>
-          <a href="/auth">Voltar ao login</a>
+          <NextNavLink to="/auth">Voltar ao login</NextNavLink>
         </div>
       </AuthWrapper>
     );
@@ -98,4 +103,3 @@ function AuthCallback() {
 }
 
 export default AuthCallback;
-

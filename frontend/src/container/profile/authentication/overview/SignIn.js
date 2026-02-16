@@ -7,9 +7,9 @@ import { login } from '../../../../redux/authentication/actionCreator';
 import { supabase } from '../../../../config/supabase';
 import { Checkbox } from '../../../../components/checkbox/checkbox';
 import Heading from '../../../../components/heading/heading';
-import { getBasePath } from '../../../../utility/getBasePath';
 import api from '../../../../config/api/axios';
 import { NextNavLink } from '../../../../components/utilities/NextLink';
+import Cookies from 'js-cookie';
 
 function SignIn() {
   const dispatch = useDispatch();
@@ -23,7 +23,6 @@ function SignIn() {
     checked: null,
   });
   const { message } = App.useApp();
-  const basePath = getBasePath();
 
   const authUser =
     typeof isLoggedIn === 'object' && isLoggedIn ? isLoggedIn : null;
@@ -61,6 +60,7 @@ function SignIn() {
 
       if (data.session) {
         const user = data.user;
+        const accessToken = data.session.access_token;
         let professional = null;
         try {
           const profResponse = await api.get('/professionals/me');
@@ -84,11 +84,14 @@ function SignIn() {
           cover_url: professional?.cover_url || null,
         };
 
+        if (accessToken) {
+          Cookies.set('access_token', accessToken);
+        }
+
         await dispatch(login(authUser));
 
         if (finalRole === 'health') {
-          const cuidadosPath = basePath ? `${basePath}/cuidados` : '/cuidados';
-          router.push(cuidadosPath);
+          router.push('/cuidados');
           return;
         }
 
@@ -106,8 +109,11 @@ function SignIn() {
         setIsSubmitting(false);
       }
     } catch (error) {
-      console.error('Sign-in exception:', error);
-      message.error('Erro ao conectar. Tente novamente.');
+      const detail =
+        error.response?.data?.detail ||
+        error.response?.data?.error ||
+        error.message;
+      message.error(detail || 'Erro ao conectar. Tente novamente.');
       setIsSubmitting(false);
     }
   };
@@ -178,9 +184,8 @@ function SignIn() {
                 {isSubmitting || isLoading ? 'Entrando...' : 'Entrar'}
               </Button>
             </Form.Item>
-            <div style={{ textAlign: 'center', marginTop: 8 }}>
-              <span>Não tem conta? </span>
-              <NextNavLink to="/auth/register">Criar conta</NextNavLink>
+            <div style={{ textAlign: 'center', marginTop: 8, color: '#666' }}>
+              Acesso por convite. Solicite seu cadastro ao administrador.
             </div>
           </Form>
         </Card>

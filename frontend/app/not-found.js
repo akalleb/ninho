@@ -3,16 +3,13 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { getImageUrl } from '../src/utility/getImageUrl';
-import { getBasePath } from '../src/utility/getBasePath';
 
 export default function NotFoundPage() {
   const router = useRouter();
-  const basePath = getBasePath();
 
   const handleReturnHome = (e) => {
     e?.preventDefault();
-    const homePath = basePath ? `${basePath}/admin` : '/admin';
-    router.push(homePath);
+    router.push('/admin');
   };
 
   const imageUrl = getImageUrl('static/img/pages/404.svg');

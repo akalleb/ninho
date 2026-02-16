@@ -19,7 +19,6 @@ from ..database import get_db
 from .. import models
 from cryptography.fernet import Fernet
 
-# Initialize Fernet with encryption key
 fernet = Fernet(ENCRYPTION_KEY) if ENCRYPTION_KEY else None
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
@@ -159,5 +158,16 @@ async def get_current_admin(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Acesso restrito a administradores"
+        )
+    return current_user
+
+
+async def get_current_admin_or_operational(
+    current_user: models.Professional = Depends(get_current_user),
+) -> models.Professional:
+    if current_user.role not in {"admin", "operational"}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso restrito a gestores e operacionais",
         )
     return current_user

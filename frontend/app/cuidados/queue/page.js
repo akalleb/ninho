@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Table, Button, Modal, Form, Select, DatePicker, message, Tag, Input } from 'antd';
+import { Row, Col, Card, Table, Button, Modal, Form, Select, DatePicker, Tag, Input, App } from 'antd';
 import FeatherIcon from 'feather-icons-react';
 import { PageHeader } from '../../../src/components/page-headers/page-headers';
 import { Main } from '../../../src/container/styled';
@@ -19,6 +19,7 @@ function QueuePage() {
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
+    const { message } = App.useApp();
 
     // Fetch Data
     const fetchData = async () => {
@@ -27,7 +28,7 @@ function QueuePage() {
             const [qRes, cRes, pRes, wRes] = await Promise.all([
                 api.get('/queue/'),
                 api.get('/children/'),
-                api.get('/professionals/'),
+                api.get('/professionals/basic'),
                 api.get('/wallets/')
             ]);
             setQueue(qRes.data);
@@ -128,7 +129,7 @@ function QueuePage() {
             <Main>
                 <Row gutter={25}>
                     <Col xs={24}>
-                        <Card bordered={false}>
+                        <Card variant="borderless">
                             <Table 
                                 dataSource={queue} 
                                 columns={columns} 

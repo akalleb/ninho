@@ -11,8 +11,17 @@ const api = axios.create({
 api.interceptors.request.use(async (config) => {
   if (typeof window === 'undefined') return config;
   try {
-    const { data } = await supabase.auth.getSession();
-    const token = data?.session?.access_token;
+    let { data } = await supabase.auth.getSession();
+    let token = data?.session?.access_token;
+    if (!token) {
+      try {
+        await supabase.auth.refreshSession();
+        const refreshed = await supabase.auth.getSession();
+        data = refreshed.data;
+        token = data?.session?.access_token;
+      } catch (e) {
+      }
+    }
     if (token) {
       config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
