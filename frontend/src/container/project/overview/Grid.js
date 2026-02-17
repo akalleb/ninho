@@ -49,7 +49,7 @@ function Grid() {
       ) : (
         <Col md={24}>
           <Cards headless>
-            <Heading>Data Not Found!</Heading>
+            <Heading>Dados não encontrados</Heading>
           </Cards>
         </Col>
       )}
@@ -62,7 +62,7 @@ function Grid() {
               onShowSizeChange={onShowSizeChange}
               pageSize={10}
               defaultCurrent={1}
-              total={40}
+              total={projects.length}
             />
           ) : null}
         </ProjectPagination>

@@ -1,5 +1,5 @@
 import actions from './actions';
-import initialState from '../../demoData/projectData.json';
+import api from '../../config/api/axios';
 
 const {
   singleProjectBegin,
@@ -19,10 +19,8 @@ const filterSinglePage = (paramsId) => {
   return async (dispatch) => {
     try {
       dispatch(singleProjectBegin());
-      const data = initialState.filter((project) => {
-        return project.id === parseInt(paramsId, 10);
-      });
-      dispatch(singleProjectSuccess(data));
+      const response = await api.get(`/projects/${paramsId}`);
+      dispatch(singleProjectSuccess([response.data]));
     } catch (err) {
       dispatch(singleProjectErr(err));
     }
@@ -33,13 +31,12 @@ const filterProjectByStatus = (status) => {
   return async (dispatch) => {
     try {
       dispatch(filterProjectBegin());
-      const data = initialState.filter((project) => {
-        if (status !== 'all') {
-          return project.status === status;
-        }
-        return initialState;
-      });
-      dispatch(filterProjectSuccess(data));
+      const params = {};
+      if (status && status !== 'all') {
+        params.status = status;
+      }
+      const response = await api.get('/projects/', { params });
+      dispatch(filterProjectSuccess(response.data || []));
     } catch (err) {
       dispatch(filterProjectErr(err.toString()));
     }
@@ -47,20 +44,56 @@ const filterProjectByStatus = (status) => {
 };
 
 const sortingProjectByCategory = (sortBy) => {
-  return async (dispatch) => {
+  return async (dispatch, getState) => {
     try {
       dispatch(sortingProjectBegin());
-      const data = initialState.sort((a, b) => {
+      const {
+        projects: { data },
+      } = getState();
+      const sorted = [...(data || [])].sort((a, b) => {
+        if (b[sortBy] === undefined || a[sortBy] === undefined) return 0;
         return b[sortBy] - a[sortBy];
       });
-
-      setTimeout(() => {
-        dispatch(sortingProjectSuccess(data));
-      }, 500);
+      dispatch(sortingProjectSuccess(sorted));
     } catch (err) {
       dispatch(sortingProjectErr(err));
     }
   };
 };
 
-export { filterSinglePage, filterProjectByStatus, sortingProjectByCategory };
+const createProject = (payload) => {
+  return async (dispatch, getState) => {
+    try {
+      const response = await api.post('/projects/', payload);
+      const project = response.data;
+
+      const {
+        projects: { data },
+      } = getState();
+
+      const updatedList = [project, ...(data || [])];
+      dispatch(filterProjectSuccess(updatedList));
+      return project;
+    } catch (err) {
+      throw err;
+    }
+  };
+};
+
+const deleteProject = (id) => {
+  return async (dispatch, getState) => {
+    try {
+      await api.delete(`/projects/${id}`);
+      const {
+        projects: { data },
+      } = getState();
+      const updatedList = (data || []).filter((project) => Number(project.id) !== Number(id));
+      dispatch(filterProjectSuccess(updatedList));
+      dispatch(singleProjectSuccess([]));
+    } catch (err) {
+      throw err;
+    }
+  };
+};
+
+export { filterSinglePage, filterProjectByStatus, sortingProjectByCategory, createProject, deleteProject };

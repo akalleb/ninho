@@ -55,6 +55,7 @@ function MenuItems({ darkMode, toggleCollapsed, topMenu, events }) {
     if (pathName.includes('my-profile')) return ['my-profile'];
     if (pathName.includes('children')) return ['children'];
     if (pathName.includes('families')) return ['families'];
+    if (pathName.includes('project')) return ['projects'];
     if (pathName.includes('reports')) return ['reports'];
     if (pathName === baseMenuPath || pathName === `${baseMenuPath}/`) return ['playground'];
     return [];
@@ -135,16 +136,25 @@ function MenuItems({ darkMode, toggleCollapsed, topMenu, events }) {
       {/* Visível para Admin e Operacional */}
       {(userRole === 'admin' || userRole === 'operational') && (
         <>
-            <Menu.Item key="families" icon={!topMenu && <FeatherIcon icon="home" />}>
+          <Menu.Item key="families" icon={!topMenu && <FeatherIcon icon="home" />}>
             <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/families`} activeClassName="">
-                Cadastro de Famílias
+              Cadastro de Famílias
             </NextNavLink>
-            </Menu.Item>
-            <Menu.Item key="children" icon={!topMenu && <FeatherIcon icon="users" />}>
+          </Menu.Item>
+          <Menu.Item key="children" icon={!topMenu && <FeatherIcon icon="users" />}>
             <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/children`} activeClassName="">
-                Crianças / Atendidos
+              Crianças / Atendidos
             </NextNavLink>
-            </Menu.Item>
+          </Menu.Item>
+          <Menu.Item key="projects" icon={!topMenu && <FeatherIcon icon="target" />}>
+            <NextNavLink
+              onClick={toggleCollapsed}
+              to={`${baseMenuPath}/project/view/grid`}
+              activeClassName=""
+            >
+              Projetos
+            </NextNavLink>
+          </Menu.Item>
         </>
       )}
 

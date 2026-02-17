@@ -39,7 +39,21 @@ function ProjectLists() {
 
   if (projects.length)
     projects.map((value) => {
-      const { id, title, status, category, percentage } = value;
+      const { id, title, status, category, percentage, start_date, end_date, participants, total_tasks, completed_tasks } = value;
+
+      const startLabel = start_date ? new Date(start_date).toLocaleDateString() : null;
+      const endLabel = end_date ? new Date(end_date).toLocaleDateString() : null;
+
+      const effectivePercentage =
+        typeof percentage === 'number'
+          ? percentage
+          : typeof value.progress === 'number'
+          ? value.progress
+          : 0;
+
+      const participantsList = Array.isArray(participants) ? participants : [];
+      const totalTasks = typeof total_tasks === 'number' ? total_tasks : null;
+      const completedTasks = typeof completed_tasks === 'number' ? completed_tasks : null;
       return dataSource.push({
         key: id,
         project: (
@@ -51,40 +65,43 @@ function ProjectLists() {
             <p>{category}</p>
           </ProjectListTitle>
         ),
-        startDate: <span className="date-started">26 Dec 2019</span>,
-        deadline: <span className="date-finished">18 Mar 2020</span>,
+        startDate: <span className="date-started">{startLabel || '-'}</span>,
+        deadline: <span className="date-finished">{endLabel || '-'}</span>,
         assigned: (
           <ProjectListAssignees>
             <ul>
-              <li>
-                <img src={getImageUrl('static/img/users/1.png')} alt="" />
-              </li>
-              <li>
-                <img src={getImageUrl('static/img/users/2.png')} alt="" />
-              </li>
-              <li>
-                <img src={getImageUrl('static/img/users/3.png')} alt="" />
-              </li>
-              <li>
-                <img src={getImageUrl('static/img/users/4.png')} alt="" />
-              </li>
-              <li>
-                <img src={getImageUrl('static/img/users/5.png')} alt="" />
-              </li>
-              <li>
-                <img src={getImageUrl('static/img/users/6.png')} alt="" />
-              </li>
-              <li>
-                <img src={getImageUrl('static/img/users/7.png')} alt="" />
-              </li>
+              {participantsList.length
+                ? participantsList.map((p, index) => (
+                    <li key={`${p.name}-${index}`}>
+                      <span className="user-initial">
+                        {p.name
+                          .split(' ')
+                          .map((part) => part.charAt(0).toUpperCase())
+                          .slice(0, 2)
+                          .join('')}
+                      </span>
+                    </li>
+                  ))
+                : (
+                  <li className="no-participants">Nenhum participante</li>
+                )}
             </ul>
           </ProjectListAssignees>
         ),
         status: <Tag className={status}>{status}</Tag>,
         completion: (
           <div className="project-list-progress">
-            <Progress percent={status === 'complete' ? 100 : percentage} size={[null, 5]} className="progress-primary" showInfo />
-            <p>12/15 Task Completed</p>
+            <Progress
+              percent={status === 'complete' ? 100 : effectivePercentage}
+              size={[null, 5]}
+              className="progress-primary"
+              showInfo
+            />
+            <p>
+              {completedTasks != null && totalTasks != null
+                ? `${completedTasks}/${totalTasks} tarefas concluídas`
+                : 'Dados de tarefas indisponíveis'}
+            </p>
           </div>
         ),
         action: (
@@ -92,9 +109,9 @@ function ProjectLists() {
             className="wide-dropdwon"
             content={
               <>
-                <span className="cursor-pointer">View</span>
-                <span className="cursor-pointer">Edit</span>
-                <span className="cursor-pointer">Delete</span>
+                <span className="cursor-pointer">Ver</span>
+                <span className="cursor-pointer">Editar</span>
+                <span className="cursor-pointer">Excluir</span>
               </>
             }
           >
@@ -108,22 +125,22 @@ function ProjectLists() {
 
   const columns = [
     {
-      title: 'Project',
+      title: 'Projeto',
       dataIndex: 'project',
       key: 'project',
     },
     {
-      title: 'Start Date',
+      title: 'Data de início',
       dataIndex: 'startDate',
       key: 'startDate',
     },
     {
-      title: 'Deadline',
+      title: 'Prazo',
       dataIndex: 'deadline',
       key: 'deadline',
     },
     {
-      title: 'Assigned To',
+      title: 'Atribuído a',
       dataIndex: 'assigned',
       key: 'assigned',
     },
@@ -133,7 +150,7 @@ function ProjectLists() {
       key: 'status',
     },
     {
-      title: 'Completion',
+      title: 'Conclusão',
       dataIndex: 'completion',
       key: 'completion',
     },
@@ -165,7 +182,7 @@ function ProjectLists() {
               onShowSizeChange={onShowSizeChange}
               pageSize={10}
               defaultCurrent={1}
-              total={40}
+              total={projects.length}
             />
           ) : null}
         </ProjectPagination>

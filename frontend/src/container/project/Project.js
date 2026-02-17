@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Row, Col, Spin, Select } from 'antd';
 import { usePathname } from 'next/navigation';
@@ -22,6 +22,7 @@ function Project() {
   const dispatch = useDispatch();
   const pathname = usePathname();
   const searchData = useSelector((state) => state.headerSearchData);
+  const projectsState = useSelector((state) => state.projects);
   const [state, setState] = useState({
     notData: searchData,
     visible: false,
@@ -29,6 +30,10 @@ function Project() {
   });
 
   const { notData, visible } = state;
+
+  useEffect(() => {
+    dispatch(filterProjectByStatus('all'));
+  }, [dispatch]);
 
   // Determine current view from pathname
   const currentView = useMemo(() => {
@@ -76,11 +81,15 @@ function Project() {
       <ProjectHeader>
         <PageHeader
           ghost
-          title="Projects"
-          subTitle={<>12 Running Projects</>}
+          title="Projetos"
+          subTitle={
+            <>
+              {projectsState?.data?.length || 0} projetos
+            </>
+          }
           buttons={[
             <Button onClick={showModal} key="1" type="primary" size="default">
-              <FeatherIcon icon="plus" size={16} /> Create Projects
+              <FeatherIcon icon="plus" size={16} /> Criar projeto
             </Button>,
           ]}
         />
@@ -98,7 +107,7 @@ function Project() {
                           onClick={() => onChangeCategory('all')} 
                           className="cursor-pointer d-inline-block"
                         >
-                          All
+                          Todos
                         </span>
                       </li>
                       <li className={state.categoryActive === 'progress' ? 'active' : 'deactivate'}>
@@ -106,7 +115,7 @@ function Project() {
                           onClick={() => onChangeCategory('progress')} 
                           className="cursor-pointer d-inline-block"
                         >
-                          In Progress
+                          Em andamento
                         </span>
                       </li>
                       <li className={state.categoryActive === 'complete' ? 'active' : 'deactivate'}>
@@ -114,7 +123,7 @@ function Project() {
                           onClick={() => onChangeCategory('complete')} 
                           className="cursor-pointer d-inline-block"
                         >
-                          Complete
+                          Concluídos
                         </span>
                       </li>
                       <li className={state.categoryActive === 'late' ? 'active' : 'deactivate'}>
@@ -122,7 +131,7 @@ function Project() {
                           onClick={() => onChangeCategory('late')} 
                           className="cursor-pointer d-inline-block"
                         >
-                          Late
+                          Atrasados
                         </span>
                       </li>
                       <li className={state.categoryActive === 'early' ? 'active' : 'deactivate'}>
@@ -130,24 +139,24 @@ function Project() {
                           onClick={() => onChangeCategory('early')} 
                           className="cursor-pointer d-inline-block"
                         >
-                          Early
+                          Adiantados
                         </span>
                       </li>
                     </ul>
                   </nav>
                 </div>
                 <div className="project-sort-search">
-                  <AutoComplete onSearch={handleSearch} dataSource={notData} placeholder="Search projects" patterns />
+                  <AutoComplete onSearch={handleSearch} dataSource={notData} placeholder="Buscar projetos" patterns />
                 </div>
                 <div className="project-sort-group">
                   <div className="sort-group">
-                    <span>Sort By:</span>
+                    <span>Ordenar por:</span>
                     <Select onChange={onSorting} defaultValue="category">
-                      <Select.Option value="category">Project Category</Select.Option>
-                      <Select.Option value="rate">Top Rated</Select.Option>
-                      <Select.Option value="popular">Popular</Select.Option>
-                      <Select.Option value="time">Newest</Select.Option>
-                      <Select.Option value="price">Price</Select.Option>
+                      <Select.Option value="category">Categoria do projeto</Select.Option>
+                      <Select.Option value="rate">Mais bem avaliados</Select.Option>
+                      <Select.Option value="popular">Mais populares</Select.Option>
+                      <Select.Option value="time">Mais recentes</Select.Option>
+                      <Select.Option value="price">Preço</Select.Option>
                     </Select>
                     <div className="layout-style">
                       <NextNavLink to="/admin/project/view/grid" className={currentView === 'grid' ? 'active' : ''}>
@@ -161,9 +170,7 @@ function Project() {
                 </div>
               </div>
             </ProjectSorting>
-            <div>
-              {currentView === 'list' ? <List /> : <Grid />}
-            </div>
+            <div>{currentView === 'list' ? <List /> : <Grid />}</div>
           </Col>
         </Row>
         <CreateProject onCancel={onCancel} visible={visible} />

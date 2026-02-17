@@ -2,9 +2,9 @@
 
 import React, { useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Row, Col, Progress, Spin } from 'antd';
+import { Row, Col, Progress, Spin, App } from 'antd';
 import FeatherIcon from 'feather-icons-react';
-import { useParams, usePathname } from 'next/navigation';
+import { useParams, usePathname, useRouter } from 'next/navigation';
 import { NextNavLink } from '../../components/utilities/NextLink';
 import { ProjectDetailsWrapper, TaskLists } from './style';
 import FileListCard from './overview/FileListCard';
@@ -13,7 +13,7 @@ import { Main } from '../styled';
 import Heading from '../../components/heading/heading';
 import { Cards } from '../../components/cards/frame/cards-frame';
 import { Button } from '../../components/buttons/buttons';
-import { filterSinglePage } from '../../redux/project/actionCreator';
+import { filterSinglePage, deleteProject } from '../../redux/project/actionCreator';
 import { getImageUrl } from '../../utility/getImageUrl';
 
 // Direct imports - no lazy loading needed since route already uses dynamic()
@@ -24,7 +24,9 @@ function ProjectDetails() {
   const params = useParams();
   const pathname = usePathname();
   const dispatch = useDispatch();
-  const project = useSelector((state) => state.project.data);
+  const router = useRouter();
+  const { notification } = App.useApp();
+  const projectState = useSelector((state) => state.project);
 
   // Get project ID from params
   // Route structure: /admin/project/projectDetails/1
@@ -43,17 +45,25 @@ function ProjectDetails() {
   useEffect(() => {
     if (dispatch && projectId) {
       const id = parseInt(projectId, 10);
-      if (!isNaN(id)) {
+      if (!Number.isNaN(id)) {
         dispatch(filterSinglePage(id));
       }
     }
   }, [projectId, dispatch]);
 
+  const project = projectState?.data;
+
   // Safety check: don't render until project data is loaded
-  if (!project || !Array.isArray(project) || project.length === 0 || !project[0]) {
+  if (
+    projectState.loading ||
+    !project ||
+    !Array.isArray(project) ||
+    project.length === 0 ||
+    !project[0]
+  ) {
     return (
       <ProjectDetailsWrapper>
-        <PageHeader ghost title="Project Details" />
+        <PageHeader ghost title="Detalhes do projeto" />
         <Main>
           <Cards headless>
             <Spin />
@@ -63,7 +73,88 @@ function ProjectDetails() {
     );
   }
 
-  const { title = '', content = '' } = project[0] || {};
+  const current = project[0] || {};
+
+  const {
+    title = '',
+    content = '',
+    description = '',
+    status,
+    progress,
+    total_tasks,
+    completed_tasks,
+    budget,
+    spendings,
+    hours_spent,
+    start_date,
+    end_date,
+    owner,
+    participants,
+  } = current;
+
+  const effectiveDescription = description || content || '';
+  const effectiveProgress =
+    typeof progress === 'number'
+      ? progress
+      : typeof current.percentage === 'number'
+      ? current.percentage
+      : 0;
+
+  const totalTasks = typeof total_tasks === 'number' ? total_tasks : null;
+  const completedTasks = typeof completed_tasks === 'number' ? completed_tasks : null;
+  const projectSpendings = typeof spendings === 'number' ? spendings : null;
+  const projectHours = typeof hours_spent === 'number' ? hours_spent : null;
+
+  const startLabel = start_date ? new Date(start_date).toLocaleDateString() : null;
+  const endLabel = end_date ? new Date(end_date).toLocaleDateString() : null;
+
+  const ownerLabel = owner || '-';
+
+  const participantsList = Array.isArray(participants) ? participants : [];
+
+  const handleDelete = async () => {
+    const numericId = current?.id ? Number(current.id) : Number(projectId);
+    if (!numericId || Number.isNaN(numericId)) {
+      return;
+    }
+    if (typeof window !== 'undefined') {
+      const confirmed = window.confirm('Tem certeza que deseja excluir este projeto?');
+      if (!confirmed) {
+        return;
+      }
+    }
+    try {
+      await dispatch(deleteProject(numericId));
+      notification.success({
+        message: 'Projeto excluído com sucesso',
+      });
+      router.push('/admin/project/view/grid');
+    } catch (error) {
+      const status = error?.response?.status;
+      let description = error?.response?.data?.detail || error.message || 'Erro desconhecido';
+      if (error?.response?.data?.detail && typeof error.response.data.detail !== 'string') {
+        try {
+          description = JSON.stringify(error.response.data.detail);
+        } catch {
+          description = 'Erro ao excluir projeto (detalhes indisponíveis)';
+        }
+      }
+      if (status === 405) {
+        description = 'A API ainda não permite excluir projetos. Esta funcionalidade será implementada no backend.';
+      }
+      notification.error({
+        message: 'Erro ao excluir projeto',
+        description,
+      });
+    }
+  };
+
+  const handleNotImplemented = (featureLabel) => {
+    notification.info({
+      message: 'Funcionalidade em breve',
+      description: `A ação "${featureLabel}" ainda não está disponível.`,
+    });
+  };
 
   return (
     <ProjectDetailsWrapper>
@@ -72,23 +163,33 @@ function ProjectDetails() {
         title={
           <div key="1" className="project-header">
             <Heading as="h2">{title}</Heading>
-            <Button type="primary" size="small">
-              <FeatherIcon icon="plus" size="14" /> Add Task
+            <Button type="primary" size="small" onClick={() => handleNotImplemented('Adicionar tarefa')}>
+              <FeatherIcon icon="plus" size="14" /> Adicionar tarefa
             </Button>
-            <Button className="btn-markComplete" outlined type="white" size="small">
-              <FeatherIcon icon="check" size="14" /> Mark as Complete
+            <Button
+              className="btn-markComplete"
+              outlined
+              type="white"
+              size="small"
+              onClick={() => handleNotImplemented('Marcar como concluído')}
+            >
+              <FeatherIcon icon="check" size="14" /> Marcar como concluído
             </Button>
           </div>
         }
         buttons={[
           <div key="1" className="project-action">
-            <span key={1} className="project-edit cursor-pointer">
+            <span
+              key={1}
+              className="project-edit cursor-pointer"
+              onClick={() => handleNotImplemented('Editar projeto')}
+            >
               <FeatherIcon icon="edit-3" size={14} />
-              Edit
+              Editar
             </span>
-            <span key={2} className="project-remove cursor-pointer">
+            <span key={2} className="project-remove cursor-pointer" onClick={handleDelete}>
               <FeatherIcon icon="trash-2" size={14} />
-              Remove
+              Remover
             </span>
           </div>,
         ]}
@@ -97,8 +198,8 @@ function ProjectDetails() {
         <Row gutter={25}>
           <Col xxl={6} xl={8} xs={24}>
             <div className="project-progress">
-              <h3>Progress</h3>
-              <Progress percent={65} size={[null, 5]} status="active" />
+              <h3>Progresso</h3>
+              <Progress percent={status === 'complete' ? 100 : effectiveProgress} size={[null, 5]} status="active" />
             </div>
             <Cards headless>
               <div className="state-single">
@@ -108,8 +209,8 @@ function ProjectDetails() {
                   </span>
                 </div>
                 <div>
-                  <Heading as="h5">47</Heading>
-                  <p>Total Task</p>
+                  <Heading as="h5">{totalTasks != null ? totalTasks : '-'}</Heading>
+                  <p>Total de tarefas</p>
                 </div>
               </div>
               <div className="state-single">
@@ -119,8 +220,8 @@ function ProjectDetails() {
                   </span>
                 </div>
                 <div>
-                  <Heading as="h5">34</Heading>
-                  <p>Task Completed</p>
+                  <Heading as="h5">{completedTasks != null ? completedTasks : '-'}</Heading>
+                  <p>Tarefas concluídas</p>
                 </div>
               </div>
               <div className="state-single">
@@ -130,8 +231,10 @@ function ProjectDetails() {
                   </span>
                 </div>
                 <div>
-                  <Heading as="h5">$27,500</Heading>
-                  <p>Spendings</p>
+                  <Heading as="h5">
+                    {projectSpendings != null ? `$${projectSpendings.toLocaleString()}` : '-'}
+                  </Heading>
+                  <p>Gastos</p>
                 </div>
               </div>
               <div className="state-single">
@@ -141,34 +244,34 @@ function ProjectDetails() {
                   </span>
                 </div>
                 <div>
-                  <Heading as="h5">250</Heading>
-                  <p>Hours Spent</p>
+                  <Heading as="h5">{projectHours != null ? projectHours : '-'}</Heading>
+                  <p>Horas investidas</p>
                 </div>
               </div>
             </Cards>
           </Col>
           <Col xxl={12} xl={16} xs={24}>
             <div className="about-project-wrapper">
-              <Cards  title="About Project">
+              <Cards  title="Sobre o projeto">
                 <div className="about-content">
-                  <p>{content}</p>
+                  <p>{effectiveDescription}</p>
                 </div>
                 <div className="about-project">
                   <div>
-                    <span>Project Owner</span>
-                    <p>Peter Jackson</p>
+                    <span>Responsável pelo projeto</span>
+                    <p>{ownerLabel}</p>
                   </div>
                   <div>
-                    <span>Budget</span>
-                    <p>$56,700</p>
+                    <span>Orçamento</span>
+                    <p>{budget ? `$${budget.toLocaleString()}` : '-'}</p>
                   </div>
                   <div>
-                    <span>Start Date</span>
-                    <p className="color-primary">28 Dec 2019</p>
+                    <span>Data de início</span>
+                    <p className="color-primary">{startLabel || '-'}</p>
                   </div>
                   <div>
-                    <span>Deadline</span>
-                    <p className="color-danger">18 Mar 2020</p>
+                    <span>Prazo</span>
+                    <p className="color-danger">{endLabel || '-'}</p>
                   </div>
                 </div>
               </Cards>
@@ -177,59 +280,39 @@ function ProjectDetails() {
           <Col xxl={6} lg={9} xs={24}>
             <div className="project-users-wrapper">
               <Cards
-                title="Users"
+                title="Usuários"
                 isbutton={
-                  <Button className="btn-addUser" outlined type="white" size="small">
-                    <FeatherIcon icon="user-plus" size={14} /> Add Users
+                  <Button
+                    className="btn-addUser"
+                    outlined
+                    type="white"
+                    size="small"
+                    onClick={() => handleNotImplemented('Adicionar usuários')}
+                  >
+                    <FeatherIcon icon="user-plus" size={14} /> Adicionar usuários
                   </Button>
                 }
               >
                 <div className="project-users">
-                  <div className="porject-user-single">
-                    <div>
-                      <img src={getImageUrl('static/img/users/1.png')} alt="" />
-                    </div>
-                    <div>
-                      <Heading as="h5">Meyri Carles</Heading>
-                      <p>Web Developer</p>
-                    </div>
-                  </div>
-                  <div className="porject-user-single">
-                    <div>
-                      <img src={getImageUrl('static/img/users/3.png')} alt="" />
-                    </div>
-                    <div>
-                      <Heading as="h5">Tuhin Molla</Heading>
-                      <p>Project Manager</p>
-                    </div>
-                  </div>
-                  <div className="porject-user-single">
-                    <div>
-                      <img src={getImageUrl('static/img/users/9.jpg')} alt="" />
-                    </div>
-                    <div>
-                      <Heading as="h5">Billal Hossain</Heading>
-                      <p>App Developer</p>
-                    </div>
-                  </div>
-                  <div className="porject-user-single">
-                    <div>
-                      <img src={getImageUrl('static/img/users/4.png')} alt="" />
-                    </div>
-                    <div>
-                      <Heading as="h5">Khalid Hasan</Heading>
-                      <p>App Developer</p>
-                    </div>
-                  </div>
-                  <div className="porject-user-single">
-                    <div>
-                      <img src={getImageUrl('static/img/users/5.png')} alt="" />
-                    </div>
-                    <div>
-                      <Heading as="h5">Meyri Carles</Heading>
-                      <p>Ui Designer</p>
-                    </div>
-                  </div>
+                  {participantsList.length
+                    ? participantsList.map((p, index) => (
+                        <div key={`${p.name}-${index}`} className="porject-user-single">
+                          <div>
+                            <img src={getImageUrl('static/img/users/1.png')} alt="" />
+                          </div>
+                          <div>
+                            <Heading as="h5">{p.name}</Heading>
+                            <p>{p.role || 'Participante'}</p>
+                          </div>
+                        </div>
+                      ))
+                    : (
+                      <div className="porject-user-single">
+                        <div>
+                          <Heading as="h5">Nenhum participante</Heading>
+                        </div>
+                      </div>
+                    )}
                 </div>
               </Cards>
             </div>
@@ -239,9 +322,9 @@ function ProjectDetails() {
               <Cards
                 title={
                   <nav>
-                    <NextNavLink to={`/admin/project/projectDetails/${projectId}/tasklist`}>Task List</NextNavLink>
+                    <NextNavLink to={`/admin/project/projectDetails/${projectId}/tasklist`}>Tarefas</NextNavLink>
                     &nbsp; &nbsp;
-                    <NextNavLink to={`/admin/project/projectDetails/${projectId}/activities`}>Activities</NextNavLink>
+                    <NextNavLink to={`/admin/project/projectDetails/${projectId}/activities`}>Atividades</NextNavLink>
                   </nav>
                 }
               >
