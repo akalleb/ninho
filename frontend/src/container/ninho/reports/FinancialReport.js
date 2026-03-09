@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { Table, Card, Progress, Spin } from 'antd';
 import api from '../../../config/api/axios';

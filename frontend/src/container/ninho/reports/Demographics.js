@@ -1,6 +1,8 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Spin } from 'antd';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Row, Col, Card, Spin } from 'antd';
 import api from '../../../config/api/axios';
 
 const COLORS = ['#5F63F2', '#20C997', '#FA8B0C', '#FF4D4F'];

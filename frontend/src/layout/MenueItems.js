@@ -23,7 +23,7 @@ function MenuItems({ darkMode, toggleCollapsed, topMenu, events }) {
     isClient && typeof authState === 'object' && authState ? authState : null;
   const userRole = authUser?.role || null;
   const baseMenuPath = userRole === 'health' ? '/cuidados' : '/admin';
-  
+
   const [windowWidth, setWindowWidth] = useState(
     typeof window !== 'undefined' ? window.innerWidth : 1920
   );
@@ -120,20 +120,21 @@ function MenuItems({ darkMode, toggleCollapsed, topMenu, events }) {
       {/* Visível apenas para Saúde */}
       {userRole === 'health' && (
         <>
-            <Menu.Item key="my-patients" icon={!topMenu && <FeatherIcon icon="users" />}>
-                <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/my-patients`} activeClassName="">
-                Meus Pacientes
-                </NextNavLink>
-            </Menu.Item>
-            <Menu.Item key="my-profile" icon={!topMenu && <FeatherIcon icon="user" />}>
-                <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/my-profile`} activeClassName="">
-                Meu Perfil / Produção
-                </NextNavLink>
-            </Menu.Item>
+          <Menu.Item key="my-patients" icon={!topMenu && <FeatherIcon icon="users" />}>
+            <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/my-patients`} activeClassName="">
+              Meus Pacientes
+            </NextNavLink>
+          </Menu.Item>
+          <Menu.Item key="my-profile" icon={!topMenu && <FeatherIcon icon="user" />}>
+            <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/my-profile`} activeClassName="">
+              Meu Perfil / Produção
+            </NextNavLink>
+          </Menu.Item>
         </>
       )}
-      
-      {/* Visível para Admin e Operacional */}
+
+      {/* Visível para Admin e Operacional 
+          A rota de projetos usa sempre /admin para garantir acesso unificado. */}
       {(userRole === 'admin' || userRole === 'operational') && (
         <>
           <Menu.Item key="families" icon={!topMenu && <FeatherIcon icon="home" />}>
@@ -146,12 +147,8 @@ function MenuItems({ darkMode, toggleCollapsed, topMenu, events }) {
               Crianças / Atendidos
             </NextNavLink>
           </Menu.Item>
-          <Menu.Item key="projects" icon={!topMenu && <FeatherIcon icon="target" />}>
-            <NextNavLink
-              onClick={toggleCollapsed}
-              to={`${baseMenuPath}/project/view/grid`}
-              activeClassName=""
-            >
+          <Menu.Item key="projects" icon={!topMenu && <FeatherIcon icon="folder" />}>
+            <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/projects`} activeClassName="">
               Projetos
             </NextNavLink>
           </Menu.Item>

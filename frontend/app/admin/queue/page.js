@@ -257,36 +257,7 @@ function QueuePage() {
                             ))}
                         </Select>
                     </Form.Item>
-                    <Form.Item
-                        noStyle
-                        shouldUpdate={(prev, cur) => prev.wallet_id !== cur.wallet_id}
-                    >
-                        {({ getFieldValue }) => {
-                            const walletId = getFieldValue('wallet_id');
-                            const selectedWallet = wallets.find((w) => w.id === walletId);
-                            if (!selectedWallet?.auto_charge_enabled) return null;
-                            const mode = selectedWallet.auto_charge_mode;
-                            const modeLabel =
-                                mode === 'service_type'
-                                    ? 'por tipo de atendimento'
-                                    : mode === 'professional'
-                                      ? 'por profissional'
-                                      : 'valor fixo por atendimento';
-                            const fallback = selectedWallet.auto_charge_flat_amount != null
-                                ? ` (padrão R$ ${Number(selectedWallet.auto_charge_flat_amount).toFixed(2)})`
-                                : '';
-                            return (
-                                <div style={{ marginBottom: 12 }}>
-                                    <Alert
-                                        type="info"
-                                        showIcon
-                                        message={`Cobrança automática ativa nesta carteira (${modeLabel}${fallback})`}
-                                        description="Ao finalizar o atendimento, o sistema lançará automaticamente uma despesa nesta carteira (ou ficará pendente se não houver saldo)."
-                                    />
-                                </div>
-                            );
-                        }}
-                    </Form.Item>
+                    
                     <Form.Item name="scheduled_time" label="Data e Hora (Deixe vazio para fila de espera imediata)">
                         <DatePicker showTime format="DD/MM/YYYY HH:mm" style={{ width: '100%' }} />
                     </Form.Item>

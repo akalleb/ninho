@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { Row, Col, Tabs, Card, Button } from 'antd';
 import { PageHeader } from '../../../components/page-headers/page-headers';

@@ -48,7 +48,7 @@ const AutoComplete = ({
       const { title, count } = group;
       return {
         label: title,
-        options: [renderItem(title, <span className="certain-search-item-count">{count} pessoas</span>)],
+        options: [renderItem(title, <span className="certain-search-item-count">{count} people</span>)],
       };
     });
 

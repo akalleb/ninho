@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Button, Table, Alert, Select, Spin, App } from 'antd';
 import { FileTextOutlined, FileExcelOutlined, WarningOutlined } from '@ant-design/icons';

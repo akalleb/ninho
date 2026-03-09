@@ -22,7 +22,7 @@ import Task from './task/reducers';
 import Contact from './contact/reducers';
 import Profile from './profile/reducers';
 import Calender from './calendar/reducers';
-import FileManager from './fileManager/reducers';
+
 import ninhoReducer from './ninho/reducers';
 
 const rootReducers = combineReducers({
@@ -57,7 +57,6 @@ const rootReducers = combineReducers({
   Contact,
   Profile,
   Calender,
-  FileManager,
 });
 
 export default rootReducers;

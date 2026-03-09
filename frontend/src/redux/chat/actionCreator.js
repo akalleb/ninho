@@ -38,12 +38,14 @@ const updatePrivetChat = (paramsId, pushItem) => {
     try {
       dispatch(updatePrivetChatBegin());
       const data = initialState[0].privetChat.map((item) => {
-        const user = item;
-        if (user.email === paramsId) {
-          user.time = pushItem.time;
-          user.content = [...user.content, pushItem];
+        if (item.email === paramsId) {
+          return {
+              ...item,
+              time: pushItem.time,
+              content: [...item.content, pushItem]
+          };
         }
-        return user;
+        return item;
       });
       dispatch(updatePrivetChatSuccess(data));
     } catch (err) {
@@ -71,12 +73,14 @@ const updateGroupChat = (paramsId, pushItem) => {
     try {
       dispatch(updateGroupChatBegin());
       const data = initialState[0].groupChat.map((item) => {
-        const user = item;
-        if (user.id === paramsId) {
-          user.time = pushItem.time;
-          user.content = [...user.content, pushItem];
+        if (item.id === paramsId) {
+           return {
+              ...item,
+              time: pushItem.time,
+              content: [...item.content, pushItem]
+          };
         }
-        return user;
+        return item;
       });
       dispatch(updateGroupChatSuccess(data));
     } catch (err) {

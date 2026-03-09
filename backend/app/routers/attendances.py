@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel
 
 from .. import database, models
-from .children import Child
+from .children import Child, Evolution, EvolutionCreate
 
 
 router = APIRouter(tags=["Attendances"])
@@ -24,6 +24,9 @@ def get_db():
 
 
 def apply_auto_charge_for_attendance(db: Session, attendance: models.Attendance) -> None:
+    return
+
+    # Legacy logic kept below for reference; auto-charge feature desativada
     if not attendance.wallet_id:
         return
 
@@ -264,13 +267,27 @@ def read_queue(
 @router.get("/attendances/my-day", response_model=List[Attendance])
 def get_professional_daily_list(professional_id: int, db: Session = Depends(get_db)):
     today = date.today()
+    effective_date = func.date(
+        func.coalesce(
+            models.Attendance.scheduled_time,
+            models.Attendance.check_in_time,
+            models.Attendance.start_time,
+        )
+    )
+    effective_order = func.coalesce(
+        models.Attendance.scheduled_time,
+        models.Attendance.check_in_time,
+        models.Attendance.start_time,
+    )
     return (
         db.query(models.Attendance)
+        .filter(models.Attendance.professional_id == professional_id)
         .filter(
-            models.Attendance.professional_id == professional_id,
-            func.date(func.coalesce(models.Attendance.scheduled_time, models.Attendance.check_in_time)) == today,
+            (models.Attendance.status == "em_espera")
+            | ((models.Attendance.status == "agendado") & (effective_date == today))
+            | ((models.Attendance.status == "em_atendimento") & (effective_date == today))
         )
-        .order_by(models.Attendance.scheduled_time.asc())
+        .order_by(effective_order.asc())
         .all()
     )
 
@@ -374,3 +391,44 @@ def delete_attendance(attendance_id: int, db: Session = Depends(get_db)):
             detail="Não é possível excluir este atendimento pois existem evoluções vinculadas a ele.",
         )
     return None
+
+
+@router.patch("/attendances/{attendance_id}/status", response_model=Attendance)
+def patch_attendance_status(
+    attendance_id: int,
+    status_update: AttendanceUpdateStatus,
+    db: Session = Depends(get_db),
+):
+    return update_attendance_status(attendance_id, status_update, db)
+
+
+@router.post("/attendances/{attendance_id}/evolution", response_model=Evolution)
+def create_attendance_evolution(
+    attendance_id: int,
+    evolution: EvolutionCreate,
+    db: Session = Depends(get_db),
+):
+    attendance = db.query(models.Attendance).filter(models.Attendance.id == attendance_id).first()
+    if not attendance:
+        raise HTTPException(status_code=404, detail="Attendance not found")
+
+    if evolution.attendance_id and evolution.attendance_id != attendance_id:
+        raise HTTPException(status_code=400, detail="Attendance ID mismatch")
+
+    if evolution.child_id != attendance.child_id:
+        raise HTTPException(status_code=400, detail="Child ID mismatch with attendance")
+
+    if attendance.status != "em_atendimento":
+        raise HTTPException(
+            status_code=400,
+            detail="Evolução só pode ser registrada em atendimentos 'Em Atendimento'",
+        )
+
+    evolution_data = evolution.model_dump()
+    evolution_data['attendance_id'] = attendance_id
+
+    db_evo = models.MultidisciplinaryEvolution(**evolution_data)
+    db.add(db_evo)
+    db.commit()
+    db.refresh(db_evo)
+    return db_evo

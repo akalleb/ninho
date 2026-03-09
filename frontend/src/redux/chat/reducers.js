@@ -1,12 +1,6 @@
 import actions from './actions';
 import staticData from '../../demoData/chatData.json';
 
-const initialState = {
-  data: staticData[0].privetChat,
-  loading: false,
-  error: null,
-};
-
 const initialStateGroupChat = {
   data: staticData[0].groupChat,
   loading: false,
@@ -20,6 +14,12 @@ const initialStateGroup = {
 };
 
 const initialStateUpdate = {
+  data: staticData[0].privetChat,
+  loading: false,
+  error: null,
+};
+
+const initialState = {
   data: staticData[0].privetChat,
   loading: false,
   error: null,
@@ -48,18 +48,18 @@ const chatReducer = (state = initialStateUpdate, action) => {
   switch (type) {
     case UPDATE_PRIVET_CHAT_BEGIN:
       return {
-        ...initialStateUpdate,
+        ...state,
         loading: true,
       };
     case UPDATE_PRIVET_CHAT_SUCCESS:
       return {
-        ...initialStateUpdate,
+        ...state,
         data,
         loading: false,
       };
     case UPDATE_PRIVET_CHAT_ERR:
       return {
-        ...initialStateUpdate,
+        ...state,
         error: err,
         loading: false,
       };
@@ -73,18 +73,18 @@ const SingleChatReducer = (state = initialState, action) => {
   switch (type) {
     case SINGLE_CHAT_BEGIN:
       return {
-        ...initialState,
+        ...state,
         loading: true,
       };
     case SINGLE_CHAT_SUCCESS:
       return {
-        ...initialState,
+        ...state,
         data,
         loading: false,
       };
     case SINGLE_CHAT_ERR:
       return {
-        ...initialState,
+        ...state,
         error: err,
         loading: false,
       };

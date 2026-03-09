@@ -1,4 +1,5 @@
 import actions from './actions';
+import staticData from '../../demoData/projectData.json';
 
 const {
   SINGLE_PROJECT_BEGIN,
@@ -15,7 +16,7 @@ const {
 } = actions;
 
 const initialStateFilter = {
-  data: [],
+  data: staticData,
   loading: false,
   error: null,
 };
@@ -25,37 +26,35 @@ const projectReducer = (state = initialStateFilter, action) => {
   switch (type) {
     case FILTER_PROJECT_BEGIN:
       return {
-        ...state,
+        ...initialStateFilter,
         loading: true,
-        error: null,
       };
     case FILTER_PROJECT_SUCCESS:
       return {
-        ...state,
+        ...initialStateFilter,
         data,
         loading: false,
-        error: null,
       };
     case FILTER_PROJECT_ERR:
       return {
-        ...state,
+        ...initialStateFilter,
         error: err,
         loading: false,
       };
     case SORTING_PROJECT_BEGIN:
       return {
-        ...state,
+        ...initialStateFilter,
         loading: true,
       };
     case SORTING_PROJECT_SUCCESS:
       return {
-        ...state,
+        ...initialStateFilter,
         data,
         loading: false,
       };
     case SORTING_PROJECT_ERR:
       return {
-        ...state,
+        ...initialStateFilter,
         error: err,
         loading: false,
       };
@@ -64,31 +63,29 @@ const projectReducer = (state = initialStateFilter, action) => {
   }
 };
 
-const initialStateSingle = {
-  data: [],
+const initialState = {
+  data: staticData,
   loading: false,
   error: null,
 };
 
-const SingleProjectReducer = (state = initialStateSingle, action) => {
+const SingleProjectReducer = (state = initialState, action) => {
   const { type, data, err } = action;
   switch (type) {
     case SINGLE_PROJECT_BEGIN:
       return {
-        ...state,
+        ...initialState,
         loading: true,
-        error: null,
       };
     case SINGLE_PROJECT_SUCCESS:
       return {
-        ...state,
+        ...initialState,
         data,
         loading: false,
-        error: null,
       };
     case SINGLE_PROJECT_ERR:
       return {
-        ...state,
+        ...initialState,
         error: err,
         loading: false,
       };

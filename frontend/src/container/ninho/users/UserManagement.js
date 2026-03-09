@@ -133,7 +133,7 @@ function UserManagement() {
             <Form.Item name="email" label="Email" rules={[{ required: true, message: 'Por favor insira o email' }]}>
               <Input type="email" />
             </Form.Item>
-            <Form.Item name="role" label="Função" initialValue="health">
+            <Form.Item name="role" label="Função" initialValue="admin">
               <Select>
                 <Option value="admin">Gestor (Admin)</Option>
                 <Option value="operational">Operacional (Social)</Option>

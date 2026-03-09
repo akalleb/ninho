@@ -373,7 +373,6 @@ class Expense(Base):
     wallet = relationship("Wallet")
     source = relationship("ResourceSource")
     created_by = relationship("Professional")
-
 class VulnerabilityStatus(str, enum.Enum):
     UNEMPLOYMENT = "desemprego"
     LOW_INCOME = "baixa_renda"

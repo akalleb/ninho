@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { Form, Select, DatePicker, Button, Row, Col } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';

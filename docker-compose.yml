@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: ninho-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ninho_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ninho_password}
+      POSTGRES_DB: ${POSTGRES_DB:-ninho_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ninho_user} -d ${POSTGRES_DB:-ninho_db}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ninho-backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-ninho_user}:${POSTGRES_PASSWORD:-ninho_password}@db:5432/${POSTGRES_DB:-ninho_db}
+      - SECRET_KEY=${SECRET_KEY:-chave_secreta_super_segura_aqui}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-eY2IxygZZN82g3YJpA95X8UoM6hW0_o8B-9Iqk3K35s=}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,backend}
+      - CORS_ALLOW_ORIGINS=${CORS_ALLOW_ORIGINS:-http://localhost:3000,http://frontend:3000}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend/media:/code/backend/media
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ninho-frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NODE_ENV=production
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

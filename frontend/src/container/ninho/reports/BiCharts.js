@@ -1,11 +1,17 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { Row, Col, Card, Spin } from 'antd';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 import api from '../../../config/api/axios';
 
+const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
+
 function BiCharts({ filters }) {
-  const [data, setData] = useState([]);
-  const [lineData, setLineData] = useState([]);
+  const [barSeries, setBarSeries] = useState([]);
+  const [barCategories, setBarCategories] = useState([]);
+  const [lineSeries, setLineSeries] = useState([]);
+  const [lineCategories, setLineCategories] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -13,63 +19,100 @@ function BiCharts({ filters }) {
     const params = {};
     if (filters.start_date) params.start_date = filters.start_date;
     if (filters.end_date) params.end_date = filters.end_date;
-    
+
     Promise.all([
-        // Group By Professional (Default)
-        api.get('/reports/bi/productivity', { params: { ...params, group_by: 'professional' } }),
-        // Evolution
-        api.get('/reports/bi/evolution', { params })
+      api.get('/reports/bi/productivity', { params: { ...params, group_by: 'professional' } }),
+      api.get('/reports/bi/evolution', { params }),
     ])
       .then(([resProd, resEvo]) => {
         const prodList = Array.isArray(resProd.data) ? resProd.data : [];
         const evoList = Array.isArray(resEvo.data) ? resEvo.data : [];
-        const chartData = prodList.map(item => ({
-            name: item.group,
-            atendimentos: item.count
-        }));
-        setData(chartData);
-        setLineData(evoList);
-      })
-      .catch(err => console.error("Erro ao carregar dados de BI", err))
-      .finally(() => setLoading(false));
 
+        const categories = prodList.map((item) => item.group);
+        const values = prodList.map((item) => item.count);
+
+        setBarCategories(categories);
+        setBarSeries([
+          {
+            name: 'Atendimentos',
+            data: values,
+          },
+        ]);
+
+        const evoCategories = evoList.map((item) => item.name);
+        const agendados = evoList.map((item) => item.agendados);
+        const realizados = evoList.map((item) => item.realizados);
+
+        setLineCategories(evoCategories);
+        setLineSeries([
+          {
+            name: 'Agendados',
+            data: agendados,
+          },
+          {
+            name: 'Realizados',
+            data: realizados,
+          },
+        ]);
+      })
+      .catch((err) => console.error('Erro ao carregar dados de BI', err))
+      .finally(() => setLoading(false));
   }, [filters]);
 
   return (
     <div style={{ marginBottom: 25 }}>
       <Row gutter={25}>
         <Col xs={24} md={12}>
-            <Card title="Produtividade por Profissional" variant="borderless">
-                {loading ? <div style={{ textAlign: 'center', padding: 50 }}><Spin /></div> : (
-                    <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={data}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="name" />
-                            <YAxis />
-                            <Tooltip />
-                            <Legend />
-                            <Bar dataKey="atendimentos" fill="#5F63F2" name="Atendimentos" />
-                        </BarChart>
-                    </ResponsiveContainer>
-                )}
-            </Card>
+          <Card title="Produtividade por Profissional" variant="borderless">
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: 50 }}>
+                <Spin />
+              </div>
+            ) : (
+              <Chart
+                type="bar"
+                height={300}
+                series={barSeries}
+                options={{
+                  chart: {
+                    toolbar: { show: false },
+                  },
+                  xaxis: {
+                    categories: barCategories,
+                  },
+                  dataLabels: { enabled: false },
+                  grid: { strokeDashArray: 3 },
+                  colors: ['#5F63F2'],
+                }}
+              />
+            )}
+          </Card>
         </Col>
-         <Col xs={24} md={12}>
-            <Card title="Evolução de Atendimentos" variant="borderless">
-                {loading ? <div style={{ textAlign: 'center', padding: 50 }}><Spin /></div> : (
-                 <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={lineData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Line type="monotone" dataKey="agendados" stroke="#FA8B0C" name="Agendados" />
-                        <Line type="monotone" dataKey="realizados" stroke="#20C997" name="Realizados" />
-                    </LineChart>
-                </ResponsiveContainer>
-                )}
-            </Card>
+        <Col xs={24} md={12}>
+          <Card title="Evolução de Atendimentos" variant="borderless">
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: 50 }}>
+                <Spin />
+              </div>
+            ) : (
+              <Chart
+                type="line"
+                height={300}
+                series={lineSeries}
+                options={{
+                  chart: {
+                    toolbar: { show: false },
+                  },
+                  xaxis: {
+                    categories: lineCategories,
+                  },
+                  dataLabels: { enabled: false },
+                  grid: { strokeDashArray: 3 },
+                  colors: ['#FA8B0C', '#20C997'],
+                }}
+              />
+            )}
+          </Card>
         </Col>
       </Row>
     </div>

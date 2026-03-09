@@ -1,10 +1,6 @@
 /* eslint-disable no-underscore-dangle */
 const textRefactor = (text, size) => {
-  if (text === undefined || text === null) {
-    return '';
-  }
-  const safeText = typeof text === 'string' ? text : String(text);
-  return `${safeText
+  return `${text
     .split(' ')
     .slice(0, size)
     .join(' ')}...`;

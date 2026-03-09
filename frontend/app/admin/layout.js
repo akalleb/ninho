@@ -47,11 +47,9 @@ export default function AdminLayout({ children }) {
     // Se usuário é profissional de saúde, bloqueia conteúdo do /admin
     if (effectiveUser.role === 'health') {
       setStatus('deniedHealth');
-      return;
+    } else {
+      setStatus('allowed');
     }
-
-    // Demais roles têm acesso
-    setStatus('allowed');
   }, [authUser, localUser, pathname]);
 
   useEffect(() => {

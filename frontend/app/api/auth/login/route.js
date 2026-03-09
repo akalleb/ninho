@@ -21,16 +21,6 @@ export async function POST(request) {
       user,
     });
   } catch (error) {
-    const status = error.response?.status || 500;
-    const detail = error.response?.data?.detail;
-
-    if (status === 401 || status === 403) {
-      return NextResponse.json(
-        { error: detail || 'Credenciais inválidas' },
-        { status },
-      );
-    }
-
     console.error('Login API error:', error);
     return NextResponse.json(
       { error: 'Erro ao autenticar. Tente novamente.' },
