@@ -1,27 +1,56 @@
-/* eslint-disable no-param-reassign */
-import React, { useState } from 'react';
+'use client';
+
+import React, { useEffect, useMemo, useState } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { useParams, useRouter } from 'next/navigation';
 import { DragDropContext, Droppable } from 'react-beautiful-dnd';
-import { Row, Col } from 'antd';
+import { Row, Col, Spin, App } from 'antd';
 import FeatherIcon from 'feather-icons-react';
-import { KanvanBoardWrap, BackShadow } from './style';
-import UpdateTask from './overview/UpdateTask';
-import KanbanColumn from './overview/KanbanColumn';
-import ColumnAdder from './components/ColumnAdder';
-import AddColumnButton from './components/AddColumnButton';
-import { Main } from '../styled';
 import { PageHeader } from '../../components/page-headers/page-headers';
+import { Main } from '../styled';
 import { Cards } from '../../components/cards/frame/cards-frame';
 import { Button } from '../../components/buttons/buttons';
-import { ShareButtonPageHeader } from '../../components/buttons/share-button/share-button';
-import { ExportButtonPageHeader } from '../../components/buttons/export-button/export-button';
-import { CalendarButtonPageHeader } from '../../components/buttons/calendar-button/calendar-button';
-import { useKanbanBoard } from './hooks/useKanbanBoard';
-import { useKanbanUI } from './hooks/useKanbanUI';
-import { useDragAndDrop } from './hooks/useDragAndDrop';
-import { useChecklist } from './hooks/useChecklist';
+import { KanvanBoardWrap, BackShadow } from '../kanban/style';
+import KanbanColumn from '../kanban/overview/KanbanColumn';
+import ColumnAdder from '../kanban/components/ColumnAdder';
+import AddColumnButton from '../kanban/components/AddColumnButton';
+import UpdateTask from '../kanban/overview/UpdateTask';
+import { useKanbanBoard } from '../kanban/hooks/useKanbanBoard';
+import { useKanbanUI } from '../kanban/hooks/useKanbanUI';
+import { useDragAndDrop } from '../kanban/hooks/useDragAndDrop';
+import { useChecklist } from '../kanban/hooks/useChecklist';
+import { filterSinglePage } from '../../redux/project/actionCreator';
 
-const Kanban = () => {
-  // Custom hooks for separated concerns
+function ProjectKanban() {
+  const params = useParams();
+  const router = useRouter();
+  const dispatch = useDispatch();
+  const { notification } = App.useApp();
+
+  const slug = params?.slug || [];
+  const projectId = useMemo(() => {
+    if (Array.isArray(slug) && slug.length > 1) return slug[1];
+    if (Array.isArray(slug) && slug.length === 1) return slug[0];
+    return params?.id || '';
+  }, [slug, params]);
+
+  const projectState = useSelector((state) => state.project);
+
+  useEffect(() => {
+    if (dispatch && projectId) {
+      const id = parseInt(projectId, 10);
+      if (!Number.isNaN(id)) {
+        dispatch(filterSinglePage(id));
+      }
+    }
+  }, [dispatch, projectId]);
+
+  const currentProject = useMemo(() => {
+    const data = projectState?.data;
+    if (!Array.isArray(data) || !data.length) return null;
+    return data[0] || null;
+  }, [projectState?.data]);
+
   const initialEmptyBoard = {
     tasks: {},
     boardData: {
@@ -79,16 +108,39 @@ const Kanban = () => {
 
   const { onDragEnd } = useDragAndDrop(boards, setBoards);
 
-  const {
-    addChecklist,
-    addChecklistTask,
-    toggleChecklistTaskCheckbox,
-  } = useChecklist(boards, addChecklistToTask, updateChecklistTaskCheckbox);
+  const { addChecklist, addChecklistTask, toggleChecklistTaskCheckbox } = useChecklist(
+    boards,
+    addChecklistToTask,
+    updateChecklistTaskCheckbox,
+  );
 
-  // Column addition UI state
   const [showAddColumnForm, setShowAddColumnForm] = useState(false);
 
-  // Wrapper functions that integrate hooks with component logic
+  useEffect(() => {
+    if (typeof window === 'undefined' || !projectId) return;
+    try {
+      const stored = window.localStorage.getItem(`project-kanban-${projectId}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && parsed.tasks && parsed.boardData && parsed.boardOrder) {
+          setBoards(parsed);
+        }
+      }
+    } catch {
+      notification.info({
+        message: 'Não foi possível carregar o quadro salvo',
+      });
+    }
+  }, [projectId, setBoards, notification]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !projectId) return;
+    try {
+      window.localStorage.setItem(`project-kanban-${projectId}`, JSON.stringify(boards));
+    } catch {
+    }
+  }, [boards, projectId]);
+
   const handleAddColumn = (columnTitle) => {
     addColumnToBoard(columnTitle);
     setShowAddColumnForm(false);
@@ -121,8 +173,6 @@ const Kanban = () => {
     updateChecklistData(data);
   };
 
-  // Checklist handlers that work with DOM (legacy code needs refactoring in UpdateTask)
-  // These handlers bridge the gap between the UpdateTask component's DOM queries and our hooks
   const handleAddChecklist = (taskId) => {
     const checklistTitle = document.querySelector(`input[name="checkListInputValue"]`)?.value;
     if (checklistTitle) {
@@ -139,7 +189,6 @@ const Kanban = () => {
     if (taskTitle && selectedCheckList) {
       const updatedChecklist = addChecklistTask(taskId, selectedCheckList, taskTitle);
       if (updatedChecklist.length > 0) {
-        // Update the boards state with the new checklist task
         const currentTask = boards.tasks[taskId];
         if (currentTask) {
           setBoards((prevBoards) => ({
@@ -163,30 +212,43 @@ const Kanban = () => {
     hideChecklistPopup();
   };
 
+  const title = currentProject?.title || 'Quadro Kanban';
+
+  if (!projectId) {
+    return (
+      <Main>
+        <Cards>
+          <Spin />
+        </Cards>
+      </Main>
+    );
+  }
+
   return (
     <>
       <PageHeader
-        title="Kanban"
-        buttons={[
-          <div key="1" className="page-header-actions">
-            <CalendarButtonPageHeader />
-            <ExportButtonPageHeader />
-            <ShareButtonPageHeader />
-            <Button size="small" type="primary">
-              <FeatherIcon icon="plus" size={14} />
-              Add New
+        ghost
+        title={
+          <div className="project-header">
+            <span>{title}</span>
+            <Button
+              size="small"
+              type="default"
+              onClick={() => router.push(`/admin/project/projectDetails/${projectId}`)}
+            >
+              <FeatherIcon icon="arrow-left" size={14} /> Voltar para detalhes
             </Button>
-          </div>,
-        ]}
+          </div>
+        }
       />
       <Main>
         <Row gutter={15}>
           <Col xs={24}>
             <KanvanBoardWrap>
-              <Cards headless title="Product Design">
+              <Cards headless title="Quadro Kanban do Projeto">
                 <DragDropContext onDragEnd={onDragEnd}>
                   <Droppable droppableId="all-columns" direction="horizontal" type="column">
-                    {provided => (
+                    {(provided) => (
                       <div className="sDash_kanban-board-list" {...provided.droppableProps} ref={provided.innerRef}>
                         {boards.boardOrder.map((boardItem, index) => {
                           const board = boards.boardData[boardItem];
@@ -212,10 +274,7 @@ const Kanban = () => {
                           );
                         })}
                         {showAddColumnForm ? (
-                          <ColumnAdder
-                            onAddColumn={handleAddColumn}
-                            onCancel={() => setShowAddColumnForm(false)}
-                          />
+                          <ColumnAdder onAddColumn={handleAddColumn} onCancel={() => setShowAddColumnForm(false)} />
                         ) : (
                           <AddColumnButton onClick={() => setShowAddColumnForm(true)} />
                         )}
@@ -246,6 +305,6 @@ const Kanban = () => {
       {backShadow && <BackShadow onClick={hideBackShadow} />}
     </>
   );
-};
+}
 
-export default Kanban;
+export default ProjectKanban;

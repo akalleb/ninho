@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import moment from 'moment';
 import api from '../../../config/api/axios';
 import fileSaver from 'file-saver';
+import * as XLSX from 'xlsx';
 
 const { Option } = Select;
 
@@ -94,6 +95,44 @@ function SusExport({ filters }) {
         });
     };
 
+    const handleExportExcel = () => {
+        try {
+            setExporting(true);
+            if (!validationData.length) {
+                message.info('Não há dados de validação para exportar.');
+                return;
+            }
+
+            const rows = validationData.map((item) => ({
+                Tipo: item.type || '',
+                Nome: item.name || '',
+                CamposFaltantes: Array.isArray(item.missing_fields)
+                    ? item.missing_fields.join(', ')
+                    : '',
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(rows);
+            const wb = { Sheets: { Dados: ws }, SheetNames: ['Dados'] };
+            const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            const blob = new Blob(
+                [excelBuffer],
+                {
+                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8',
+                },
+            );
+
+            const monthStr = String(selectedMonth).padStart(2, '0');
+            const filename = `validacao_sus_${selectedYear}_${monthStr}.xlsx`;
+            fileSaver.saveAs(blob, filename);
+            message.success('Planilha Excel gerada com sucesso!');
+        } catch (err) {
+            console.error('Erro ao exportar Excel SUS', err);
+            message.error('Erro ao gerar planilha Excel.');
+        } finally {
+            setExporting(false);
+        }
+    };
+
     return (
         <Row gutter={25}>
             <Col xs={24} lg={16}>
@@ -131,7 +170,12 @@ function SusExport({ filters }) {
                         >
                             Gerar BPA-C (Consolidado)
                         </Button>
-                         <Button icon={<FileExcelOutlined />} size="large">
+                        <Button
+                            icon={<FileExcelOutlined />}
+                            size="large"
+                            onClick={handleExportExcel}
+                            loading={exporting}
+                        >
                             Exportar Excel
                         </Button>
                     </div>

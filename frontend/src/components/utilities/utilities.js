@@ -1,9 +1,13 @@
 /* eslint-disable no-underscore-dangle */
 const textRefactor = (text, size) => {
-  return `${text
-    .split(' ')
-    .slice(0, size)
-    .join(' ')}...`;
+  if (!text || typeof text !== 'string') {
+    return '';
+  }
+  const words = text.split(' ');
+  if (!size || size <= 0 || words.length <= size) {
+    return text;
+  }
+  return `${words.slice(0, size).join(' ')}...`;
 };
 
 const chartLinearGradient = (canvas, height, color) => {

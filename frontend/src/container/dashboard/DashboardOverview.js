@@ -21,8 +21,6 @@ import {
 } from 'chart.js';
 import { Line, Doughnut, Bar } from 'react-chartjs-2';
 import api from '../../config/api/axios';
-// Importação do componente de Notificações
-import NotificationBox from '../../components/utilities/auth-info/notification';
 
 ChartJS.register(
   CategoryScale,
@@ -59,47 +57,20 @@ const DashboardOverview = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // 1. Métricas e Cards (Paralelo)
-      const [childReq, famReq, walletReq] = await Promise.all([
-        api.get('/children/count'),
-        api.get('/families/count'),
-        api.get('/wallets/'),
-      ]);
-
-      const totalBalance = walletReq.data.reduce((acc, curr) => acc + (curr.balance || 0), 0);
-
-      // Datas para Filtros
       const now = new Date();
-      // Default: Mês atual para o card de atendimentos
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      
+
       let filterStart = startOfMonth.toISOString().split('T')[0];
       let filterEnd = endOfMonth.toISOString().split('T')[0];
       let isFiltered = false;
 
       if (dateRange[0] && dateRange[1]) {
-        // AntD DatePicker returns Dayjs objects which have .format()
         filterStart = dateRange[0].format('YYYY-MM-DD');
         filterEnd = dateRange[1].format('YYYY-MM-DD');
         isFiltered = true;
       }
 
-      // Chamada para o Card (Sempre respeita o filtro ou default mês atual)
-      const attCardReq = await api.get(`/attendances/?status=finalizado&start_date=${filterStart}&end_date=${filterEnd}`);
-      const attendancesCount = attCardReq.data.length;
-
-      setMetrics({
-        childrenCount: childReq.data.count,
-        familiesCount: famReq.data.count,
-        attendancesCount,
-        totalBalance
-      });
-
-      // 2. Gráficos
-      
-      // Evolução (Line Chart)
-      // Se tiver filtro, usa o filtro. Se não, últimos 12 meses.
       let evoStart = new Date();
       evoStart.setMonth(evoStart.getMonth() - 11);
       evoStart.setDate(1);
@@ -111,28 +82,48 @@ const DashboardOverview = () => {
         evoEndStr = filterEnd;
       }
 
-      const attGraphReq = await api.get(`/attendances/?status=finalizado&start_date=${evoStartStr}&end_date=${evoEndStr}`);
-      const evolutionData = processEvolutionData(attGraphReq.data);
+      const [
+        childReq,
+        famReq,
+        walletReq,
+        attCardReq,
+        attGraphReq,
+        sevReq,
+        servReq,
+        incReq,
+      ] = await Promise.all([
+        api.get('/children/count'),
+        api.get('/families/count'),
+        api.get('/wallets/'),
+        api.get(`/attendances/?status=finalizado&start_date=${filterStart}&end_date=${filterEnd}`),
+        api.get(`/attendances/?status=finalizado&start_date=${evoStartStr}&end_date=${evoEndStr}`),
+        api.get('/children/summary_by_severity_level'),
+        api.get('/evolutions/summary_by_service_type?months=3'),
+        api.get('/incomes/?limit=5&order_by=date_desc'),
+      ]);
 
-      // Severidade (Pie)
-      const sevReq = await api.get('/children/summary_by_severity_level');
-      
-      // Serviços (Bar)
-      const servReq = await api.get('/evolutions/summary_by_service_type?months=3');
+      const totalBalance = walletReq.data.reduce((acc, curr) => acc + (curr.balance || 0), 0);
+      const attendancesCount = attCardReq.data.length;
+
+      setMetrics({
+        childrenCount: childReq.data.count,
+        familiesCount: famReq.data.count,
+        attendancesCount,
+        totalBalance,
+      });
+
+      const evolutionData = processEvolutionData(attGraphReq.data);
 
       setGraphs({
         severity: processSimpleData(sevReq.data, 'severity'),
         services: processSimpleData(servReq.data, 'service'),
-        evolution: evolutionData
+        evolution: evolutionData,
       });
 
-      // 3. Tabela de Receitas
-      const incReq = await api.get('/incomes/?limit=5&order_by=date_desc');
       setIncomes(incReq.data);
-
     } catch (error) {
-      console.error("Erro ao carregar dados", error);
-      message.error("Não foi possível carregar os dados do dashboard.");
+      console.error('Erro ao carregar dados', error);
+      message.error('Não foi possível carregar os dados do dashboard.');
     } finally {
       setLoading(false);
     }
@@ -235,12 +226,10 @@ const DashboardOverview = () => {
 
   return (
     <div style={{ padding: '25px' }}>
-      {/* Header Atualizado: Visão Geral substituído por Notificações */}
       <Row gutter={25} justify="space-between" align="middle" style={{ marginBottom: 25 }}>
         <Col>
-            {/* Título removido e substituído pelo componente de Notificações */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <NotificationBox />
+                <span style={{ fontSize: 20, fontWeight: 600 }}>Visão Geral</span>
             </div>
         </Col>
         <Col>

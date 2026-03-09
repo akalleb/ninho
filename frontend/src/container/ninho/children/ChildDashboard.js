@@ -24,15 +24,18 @@ function ChildDashboard({ params }) {
   const [child, setChild] = useState(null);
   const [evolutions, setEvolutions] = useState([]);
   const [medications, setMedications] = useState([]);
+  const [referrals, setReferrals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [professionalMap, setProfessionalMap] = useState({});
   
   // Modal States
   const [isEvoModalOpen, setIsEvoModalOpen] = useState(false);
   const [isMedModalOpen, setIsMedModalOpen] = useState(false);
+  const [isReferralModalOpen, setIsReferralModalOpen] = useState(false);
   const [editingMedication, setEditingMedication] = useState(null);
   const [formEvo] = Form.useForm();
   const [formMed] = Form.useForm();
+  const [formReferral] = Form.useForm();
 
   const router = useRouter();
 
@@ -66,14 +69,16 @@ function ChildDashboard({ params }) {
   const fetchData = async () => {
       setLoading(true);
       try {
-          const [childRes, evoRes, medRes] = await Promise.all([
+          const [childRes, evoRes, medRes, refRes] = await Promise.all([
               api.get(`/children/${childId}`),
               api.get(`/children/${childId}/evolutions`),
-              api.get(`/children/${childId}/medications`)
+              api.get(`/children/${childId}/medications`),
+              api.get(`/health-referrals`, { params: { child_id: childId } })
           ]);
           setChild(childRes.data);
           setEvolutions(evoRes.data);
           setMedications(medRes.data);
+          setReferrals(refRes.data);
       } catch (error) {
           message.error("Erro ao carregar prontuário.");
       } finally {
@@ -253,6 +258,33 @@ function ChildDashboard({ params }) {
       }
   };
 
+  const handleAddReferral = async () => {
+      try {
+          const values = await formReferral.validateFields();
+          await api.post('/health-referrals/', {
+              ...values,
+              child_id: parseInt(childId, 10),
+              referral_date: values.referral_date.format('YYYY-MM-DD')
+          });
+          message.success("Encaminhamento registrado!");
+          setIsReferralModalOpen(false);
+          formReferral.resetFields();
+          fetchData();
+      } catch (e) {
+          message.error("Erro ao registrar encaminhamento.");
+      }
+  };
+
+  const updateReferralStatus = async (id, status) => {
+      try {
+          await api.put(`/health-referrals/${id}`, { status });
+          message.success("Status atualizado!");
+          fetchData();
+      } catch (e) {
+          message.error("Erro ao atualizar status.");
+      }
+  };
+
   // Extract biometric data for charts
   const biometricData = React.useMemo(() => {
     const data = [];
@@ -386,8 +418,11 @@ function ChildDashboard({ params }) {
         <Cards
             title={`Prontuário: ${child.name}`}
             // subTitle={`Idade: ${dayjs().diff(dayjs(child.birth_date), 'year')} anos | Diagnóstico: ${child.diagnosis || 'Não inf.'}`}
-            extra={
+            isbutton={
                 <div style={{ display: 'flex', gap: 10 }}>
+                    <Button key="referral" onClick={() => setIsReferralModalOpen(true)}>
+                        <FeatherIcon icon="share" size={14} /> Encaminhar
+                    </Button>
                     <Button key="evo" type="primary" onClick={() => setIsEvoModalOpen(true)}>
                         <FeatherIcon icon="file-plus" size={14} /> Registrar Evolução
                     </Button>
@@ -534,6 +569,60 @@ function ChildDashboard({ params }) {
                                         description={`${item.dosage || ''} ${item.schedule ? `- ${item.schedule}` : ''} ${item.frequency ? `(${item.frequency})` : ''}`}
                                     />
                                     <Tag>{item.status}</Tag>
+                                </List.Item>
+                            )}
+                        />
+                    </Cards>
+
+                    <Cards 
+                        title="Encaminhamentos de Saúde" 
+                        style={{ marginTop: 25 }}
+                        headless={false}
+                        extra={
+                          <Button size="small" type="primary" onClick={() => setIsReferralModalOpen(true)}>
+                            Adicionar Encaminhamento
+                          </Button>
+                        }
+                    >
+                        <List
+                            itemLayout="horizontal"
+                            dataSource={referrals}
+                            locale={{ emptyText: 'Nenhum encaminhamento registrado' }}
+                            renderItem={item => (
+                                <List.Item
+                                    actions={[
+                                        <Select 
+                                            defaultValue={item.status} 
+                                            style={{ width: 120 }} 
+                                            onChange={(val) => updateReferralStatus(item.id, val)}
+                                            size="small"
+                                        >
+                                            <Option value="pending">Pendente</Option>
+                                            <Option value="scheduled">Agendado</Option>
+                                            <Option value="completed">Concluído</Option>
+                                            <Option value="canceled">Cancelado</Option>
+                                        </Select>
+                                    ]}
+                                >
+                                    <List.Item.Meta
+                                        avatar={<Avatar style={{ backgroundColor: '#1890ff' }} icon={<FeatherIcon icon="share" size={12} />} />}
+                                        title={`${item.specialty} ${item.professional_name ? `- ${item.professional_name}` : ''}`}
+                                        description={
+                                            <>
+                                                <div>Data: {dayjs(item.referral_date).format('DD/MM/YYYY')}</div>
+                                                {item.notes && <div>Obs: {item.notes}</div>}
+                                            </>
+                                        }
+                                    />
+                                    <Tag color={
+                                        item.status === 'completed' ? 'green' : 
+                                        item.status === 'canceled' ? 'red' : 
+                                        item.status === 'scheduled' ? 'blue' : 'orange'
+                                    }>
+                                        {item.status === 'pending' ? 'Pendente' :
+                                         item.status === 'scheduled' ? 'Agendado' :
+                                         item.status === 'completed' ? 'Concluído' : 'Cancelado'}
+                                    </Tag>
                                 </List.Item>
                             )}
                         />
@@ -736,6 +825,45 @@ function ChildDashboard({ params }) {
                             <Option value="sos">SOS (Se necessário)</Option>
                             <Option value="interrompido">Interrompido</Option>
                         </Select>
+                    </Form.Item>
+                </Form>
+            </Modal>
+
+            {/* Modal: Add Referral */}
+            <Modal 
+                title="Adicionar Encaminhamento" 
+                open={isReferralModalOpen} 
+                onOk={handleAddReferral} 
+                onCancel={() => setIsReferralModalOpen(false)}
+            >
+                <Form form={formReferral} layout="vertical">
+                    <Form.Item name="specialty" label="Especialidade" rules={[{ required: true }]}>
+                        <Select>
+                            <Option value="Psicólogo">Psicólogo</Option>
+                            <Option value="Nutricionista">Nutricionista</Option>
+                            <Option value="Dentista">Dentista</Option>
+                            <Option value="Fonoaudiólogo">Fonoaudiólogo</Option>
+                            <Option value="Terapeuta Ocupacional">Terapeuta Ocupacional</Option>
+                            <Option value="Médico Clínico">Médico Clínico</Option>
+                            <Option value="Psiquiatra">Psiquiatra</Option>
+                            <Option value="Outros">Outros</Option>
+                        </Select>
+                    </Form.Item>
+                    <Form.Item name="professional_name" label="Nome do Profissional (Opcional)">
+                        <Input placeholder="Ex: Dr. Silva" />
+                    </Form.Item>
+                    <Form.Item name="referral_date" label="Data do Encaminhamento" rules={[{ required: true }]}>
+                        <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+                    </Form.Item>
+                    <Form.Item name="priority" label="Prioridade" initialValue="medium">
+                        <Select>
+                            <Option value="low">Baixa</Option>
+                            <Option value="medium">Média</Option>
+                            <Option value="high">Alta</Option>
+                        </Select>
+                    </Form.Item>
+                    <Form.Item name="notes" label="Observações">
+                        <TextArea rows={3} />
                     </Form.Item>
                 </Form>
             </Modal>

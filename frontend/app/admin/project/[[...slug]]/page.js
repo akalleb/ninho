@@ -7,6 +7,7 @@ import withAdminLayout from '../../../../src/layout/withAdminLayout';
 import Project from '../../../../src/container/project/Project';
 import ProjectDetails from '../../../../src/container/project/ProjectDetails';
 import ProjectCreate from '../../../../src/container/project/ProjectCreate';
+import ProjectKanban from '../../../../src/container/project/ProjectKanban';
 
 function ProjectRoutesPage() {
   const params = useParams();
@@ -20,8 +21,9 @@ function ProjectRoutesPage() {
   } else if (firstSlug === 'create') {
     Component = ProjectCreate;
   } else if (firstSlug === 'projectDetails' || firstSlug?.toLowerCase() === 'projectdetails') {
-    // projectDetails route with ID, e.g., /admin/project/projectDetails/1
     Component = ProjectDetails;
+  } else if (firstSlug === 'kanban') {
+    Component = ProjectKanban;
   }
 
   if (!Component) {

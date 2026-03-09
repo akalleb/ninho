@@ -163,7 +163,20 @@ function ProjectDetails() {
         title={
           <div key="1" className="project-header">
             <Heading as="h2">{title}</Heading>
-            <Button type="primary" size="small" onClick={() => handleNotImplemented('Adicionar tarefa')}>
+            <Button
+              type="primary"
+              size="small"
+              onClick={() => router.push(`/admin/project/kanban/${projectId}`)}
+            >
+              <FeatherIcon icon="layout" size="14" /> Abrir quadro Kanban
+            </Button>
+            <Button
+              type="default"
+              size="small"
+              onClick={() =>
+                router.push(`/admin/project/projectDetails/${projectId}/tasklist`)
+              }
+            >
               <FeatherIcon icon="plus" size="14" /> Adicionar tarefa
             </Button>
             <Button
@@ -171,7 +184,31 @@ function ProjectDetails() {
               outlined
               type="white"
               size="small"
-              onClick={() => handleNotImplemented('Marcar como concluído')}
+              onClick={async () => {
+                const numericId = current?.id ? Number(current.id) : Number(projectId);
+                if (!numericId || Number.isNaN(numericId)) {
+                  return;
+                }
+                try {
+                  await api.put(`/projects/${numericId}`, {
+                    status: 'complete',
+                    progress: 100,
+                  });
+                  notification.success({
+                    message: 'Projeto marcado como concluído',
+                  });
+                  router.refresh?.();
+                } catch (error) {
+                  const detail =
+                    error.response?.data?.detail ||
+                    error.response?.data?.error ||
+                    error.message;
+                  notification.error({
+                    message: 'Erro ao marcar projeto como concluído',
+                    description: detail,
+                  });
+                }
+              }}
             >
               <FeatherIcon icon="check" size="14" /> Marcar como concluído
             </Button>

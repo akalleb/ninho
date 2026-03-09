@@ -4,7 +4,7 @@ from sqlalchemy import func, text, or_
 from sqlalchemy.exc import IntegrityError
 from typing import List, Optional
 from . import models, database
-from .routers import auth, families, children, projects, finances, reports, attendances
+from .routers import auth, families, children, projects, finances, reports, attendances, inventory, health_referrals
 from .routers.children import Evolution
 from pydantic import BaseModel, EmailStr, computed_field, field_validator
 from datetime import datetime, date, timedelta
@@ -49,6 +49,8 @@ app.include_router(projects.router)
 app.include_router(finances.router)
 app.include_router(reports.router)
 app.include_router(attendances.router)
+app.include_router(inventory.router)
+app.include_router(health_referrals.router)
 
 origins = os.getenv(
     "CORS_ALLOW_ORIGINS",

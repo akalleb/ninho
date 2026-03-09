@@ -152,6 +152,11 @@ function MenuItems({ darkMode, toggleCollapsed, topMenu, events }) {
               Projetos
             </NextNavLink>
           </Menu.Item>
+          <Menu.Item key="warehouse" icon={!topMenu && <FeatherIcon icon="package" />}>
+            <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/warehouse`} activeClassName="">
+              Almoxarifado
+            </NextNavLink>
+          </Menu.Item>
         </>
       )}
 

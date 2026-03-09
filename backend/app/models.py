@@ -62,6 +62,14 @@ class ProjectStatus(str, enum.Enum):
     COMPLETE = "complete"
     LATE = "late"
 
+
+class InventoryCategory(str, enum.Enum):
+    CLEANING = "cleaning"
+    FOOD = "food"
+    SUPPLY = "supply"
+    EQUIPMENT = "equipment"
+    OTHER = "other"
+
 class Professional(Base):
     __tablename__ = "professionals"
 
@@ -166,6 +174,7 @@ class Child(Base):
     attendances = relationship("Attendance", back_populates="child")
     medications = relationship("ChildMedication", back_populates="child")
     evolutions = relationship("MultidisciplinaryEvolution", back_populates="child")
+    referrals = relationship("HealthReferral", back_populates="child")
 
 class ChildMedication(Base):
     __tablename__ = "child_medications"
@@ -477,3 +486,91 @@ class Project(Base):
     owner = Column(String, nullable=True)
     participants = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class ProjectTaskStatus(str, enum.Enum):
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+
+
+class ProjectTask(Base):
+    __tablename__ = "project_tasks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    status = Column(String, default=ProjectTaskStatus.PENDING)
+    due_date = Column(Date, nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    project = relationship("Project")
+
+
+class InventoryItem(Base):
+    __tablename__ = "inventory_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    category = Column(String, nullable=True)
+    unit = Column(String, nullable=True)
+    description = Column(Text, nullable=True)
+    min_stock = Column(Float, nullable=True)
+    current_stock = Column(Float, nullable=False, default=0)
+    location = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class InventoryMovementType(str, enum.Enum):
+    IN = "entrada"
+    OUT = "saida"
+
+
+class InventoryMovement(Base):
+    __tablename__ = "inventory_movements"
+
+    id = Column(Integer, primary_key=True, index=True)
+    item_id = Column(Integer, ForeignKey("inventory_items.id"), nullable=False)
+    type = Column(String, nullable=False)
+    quantity = Column(Float, nullable=False)
+    reference = Column(String, nullable=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    item = relationship("InventoryItem")
+
+
+class HealthReferralStatus(str, enum.Enum):
+    PENDING = "pending"
+    SCHEDULED = "scheduled"
+    COMPLETED = "completed"
+    CANCELED = "canceled"
+
+
+class HealthReferralPriority(str, enum.Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+class HealthReferral(Base):
+    __tablename__ = "health_referrals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    child_id = Column(Integer, ForeignKey("children.id"), nullable=False)
+    
+    specialty = Column(String, nullable=False) # Psicólogo, Dentista, etc.
+    professional_name = Column(String, nullable=True) # Nome do profissional se já souber
+    referral_date = Column(Date, nullable=False, default=func.now())
+    
+    status = Column(String, default=HealthReferralStatus.PENDING)
+    priority = Column(String, default=HealthReferralPriority.MEDIUM)
+    
+    notes = Column(Text, nullable=True)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    child = relationship("Child", back_populates="referrals")
