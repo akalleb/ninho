@@ -16,6 +16,9 @@
 .env
 .env.local
 .env.production
+.env.prod
+backend/.env.prod
+frontend/.env.local
 
 backend/media/
 **/.DS_Store
