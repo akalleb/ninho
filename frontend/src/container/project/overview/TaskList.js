@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Table, Button, Modal, Form, Input, DatePicker, Select, App, Checkbox, Tag } from 'antd';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { useDispatch } from 'react-redux';
 import dayjs from 'dayjs';
 import api from '../../../config/api/axios';
@@ -18,6 +18,7 @@ function TaskList() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [form] = Form.useForm();
+  const searchParams = useSearchParams();
 
   const loadTasks = async () => {
     if (!projectId) return;
@@ -34,6 +35,24 @@ function TaskList() {
 
   useEffect(() => {
     loadTasks();
+  }, [projectId]);
+
+  useEffect(() => {
+    const shouldOpen = searchParams?.get('newTask') === '1';
+    if (shouldOpen) {
+      openNewTaskModal();
+    }
+  }, [searchParams, projectId]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const handler = () => {
+      openNewTaskModal();
+    };
+    window.addEventListener('openProjectNewTaskModal', handler);
+    return () => {
+      window.removeEventListener('openProjectNewTaskModal', handler);
+    };
   }, [projectId]);
 
   const openNewTaskModal = () => {

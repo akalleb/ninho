@@ -2,6 +2,7 @@
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
 const nextConfig = {
+  output: 'standalone', // Enable standalone output for Docker
   reactStrictMode: false, // Disabled to prevent double renders in development
   swcMinify: true,
   eslint: {

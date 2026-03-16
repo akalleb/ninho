@@ -1,57 +1,43 @@
-version: '3.8'
-
 services:
-  db:
-    image: postgres:15-alpine
-    container_name: ninho-db
-    restart: always
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-ninho_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ninho_password}
-      POSTGRES_DB: ${POSTGRES_DB:-ninho_db}
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ninho_user} -d ${POSTGRES_DB:-ninho_db}" ]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: ninho-backend
-    restart: always
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-ninho_user}:${POSTGRES_PASSWORD:-ninho_password}@db:5432/${POSTGRES_DB:-ninho_db}
-      - SECRET_KEY=${SECRET_KEY:-chave_secreta_super_segura_aqui}
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-eY2IxygZZN82g3YJpA95X8UoM6hW0_o8B-9Iqk3K35s=}
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,backend}
-      - CORS_ALLOW_ORIGINS=${CORS_ALLOW_ORIGINS:-http://localhost:3000,http://frontend:3000}
-    depends_on:
-      db:
-        condition: service_healthy
-    volumes:
-      - ./backend/media:/code/backend/media
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - FAMILY_DOCS_BUCKET=${FAMILY_DOCS_BUCKET}
+      - CHILD_DOCS_BUCKET=${CHILD_DOCS_BUCKET}
+      - R2_ACCOUNT_ID=${R2_ACCOUNT_ID}
+      - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID}
+      - R2_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY}
+      - R2_BUCKET_NAME=${R2_BUCKET_NAME}
+      - NEXT_PUBLIC_R2_PUBLIC_URL=${NEXT_PUBLIC_R2_PUBLIC_URL}
+    restart: always
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
+        - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+        - NEXT_PUBLIC_API_URL=http://backend:8000 # Interno para SSR
+        # Para o browser, precisamos da URL pública do backend (no VPS, será o domínio)
+        # Em dev local, pode ser localhost:8000 se exposto
     container_name: ninho-frontend
-    restart: always
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
-      - NODE_ENV=production
+      - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - NEXT_PUBLIC_API_URL=http://backend:8000
     depends_on:
       - backend
-
-volumes:
-  postgres_data:
+    restart: always

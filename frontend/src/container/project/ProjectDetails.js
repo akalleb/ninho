@@ -15,6 +15,7 @@ import { Cards } from '../../components/cards/frame/cards-frame';
 import { Button } from '../../components/buttons/buttons';
 import { filterSinglePage, deleteProject } from '../../redux/project/actionCreator';
 import { getImageUrl } from '../../utility/getImageUrl';
+import api from '../../config/api/axios';
 
 // Direct imports - no lazy loading needed since route already uses dynamic()
 import TaskList from './overview/TaskList';
@@ -93,12 +94,14 @@ function ProjectDetails() {
   } = current;
 
   const effectiveDescription = description || content || '';
-  const effectiveProgress =
+  const rawProgress =
     typeof progress === 'number'
       ? progress
       : typeof current.percentage === 'number'
       ? current.percentage
       : 0;
+
+  const effectiveProgress = Math.max(0, Math.min(100, Number.isFinite(rawProgress) ? rawProgress : 0));
 
   const totalTasks = typeof total_tasks === 'number' ? total_tasks : null;
   const completedTasks = typeof completed_tasks === 'number' ? completed_tasks : null;
@@ -173,13 +176,17 @@ function ProjectDetails() {
             <Button
               type="default"
               size="small"
-              onClick={() =>
-                router.push(`/admin/project/projectDetails/${projectId}/tasklist`)
-              }
+              onClick={() => {
+                if (currentView !== 'tasklist') {
+                  router.push(`/admin/project/projectDetails/${projectId}/tasklist?newTask=1`);
+                } else if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new Event('openProjectNewTaskModal'));
+                }
+              }}
             >
               <FeatherIcon icon="plus" size="14" /> Adicionar tarefa
             </Button>
-            <Button
+              <Button
               className="btn-markComplete"
               outlined
               type="white"
@@ -189,14 +196,21 @@ function ProjectDetails() {
                 if (!numericId || Number.isNaN(numericId)) {
                   return;
                 }
+                if (effectiveProgress < 100) {
+                  notification.warning({
+                    message: 'Progresso incompleto',
+                    description: 'Conclua todas as tarefas para marcar o projeto como concluído.',
+                  });
+                  return;
+                }
                 try {
                   await api.put(`/projects/${numericId}`, {
                     status: 'complete',
-                    progress: 100,
                   });
                   notification.success({
                     message: 'Projeto marcado como concluído',
                   });
+                  await dispatch(filterSinglePage(numericId));
                   router.refresh?.();
                 } catch (error) {
                   const detail =
@@ -236,7 +250,7 @@ function ProjectDetails() {
           <Col xxl={6} xl={8} xs={24}>
             <div className="project-progress">
               <h3>Progresso</h3>
-              <Progress percent={status === 'complete' ? 100 : effectiveProgress} size={[null, 5]} status="active" />
+              <Progress percent={effectiveProgress} size={[null, 5]} status="active" />
             </div>
             <Cards headless>
               <div className="state-single">

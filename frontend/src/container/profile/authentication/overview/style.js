@@ -12,6 +12,7 @@ const Aside = Styled.aside`
   background-repeat: no-repeat;
   background-attachment: fixed;
   background-position: left top;
+  overflow: hidden; /* Prevent scrollbars */
   @media only screen and (max-width: 767px){
     height: 100%;
   }
@@ -43,29 +44,39 @@ const Aside = Styled.aside`
 `;
 
 const Content = Styled.div`
-    padding: 100px;
-    @media only screen and (max-width: 1599px){
-      padding: 50px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    width: 100%;
+    padding: 20px;
+    z-index: 10;
+    position: relative;
+
+    .logo-image {
+      width: 150px;
+      margin-bottom: 40px;
     }
-    @media only screen and (max-width: 991px){
-      padding: 20px;
-    }
-    @media only screen and (max-width: 767px){
-      text-align: center;
-    }
-    .auth-content-figure{
+
+    .auth-content-figure {
+      max-width: 100%;
+      height: auto;
+      object-fit: contain;
       @media only screen and (max-width: 1199px){
-        max-width: 420px;
-      }
-      @media only screen and (max-width: 991px){
-        max-width: 100%;
+        max-width: 80%;
       }
     }
 `;
 
 const AuthWrapper = Styled.div`
-  height: 100%;
+  height: 100vh;
   padding: 40px;
+  overflow-y: auto; /* Allow scroll if content is too tall */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  
   @media only screen and (max-width: 1599px){
     padding: 25px;
   }
