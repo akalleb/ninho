@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel
 
 from .. import database, models
-from .children import Child, Evolution, EvolutionCreate
+from ..modules.children.schemas import ChildResponse as Child, EvolutionResponse as Evolution, EvolutionCreate
 
 
 router = APIRouter(tags=["Attendances"])

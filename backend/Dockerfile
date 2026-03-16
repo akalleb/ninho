@@ -1,29 +1,24 @@
-# Base image
-FROM python:3.11-slim
+FROM python:3.12-slim
 
-# Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-ENV PYTHONPATH=/code/backend
 
-# Set work directory
-WORKDIR /code/backend
+WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
+# Install system dependencies (including git if needed for some packages, and libpq for postgres)
+RUN apt-get update && apt-get install -y \
+    build-essential \
     libpq-dev \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
-# Install python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy project
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of the application
 COPY . .
-
-# Create media directory for uploads
-RUN mkdir -p /code/backend/media/avatars
 
 # Expose port
 EXPOSE 8000

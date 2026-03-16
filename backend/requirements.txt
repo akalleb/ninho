@@ -5,3 +5,9 @@ psycopg2-binary
 python-dotenv
 pydantic
 supabase
+python-jose[cryptography]
+cryptography
+python-multipart
+httpx
+alembic
+email-validator

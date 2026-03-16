@@ -1,8 +1,8 @@
 from pydantic import BaseModel, EmailStr, field_validator
 from datetime import datetime, date
-from typing import Optional
+from typing import Optional, Dict
 
-from ..core.security import decrypt_data
+from ...core.security import decrypt_data
 
 class ProfessionalBase(BaseModel):
     name: str
@@ -58,13 +58,12 @@ class ProfessionalBasic(BaseModel):
     status: str | None = None
     avatar_url: str | None = None
     registry_number: str | None = None
+    
+    class Config:
+        from_attributes = True
 
 class ProfessionalStatusUpdate(BaseModel):
     status: str
-
-class PasswordChangeRequest(BaseModel):
-    old_password: str
-    new_password: str
 
 class ProfessionalForceDeleteRequest(BaseModel):
     confirm: str
@@ -73,7 +72,7 @@ class ProfessionalDeleteImpact(BaseModel):
     id: int
     name: str
     email: str
-    references: dict
+    references: Dict[str, int]
 
 class ProductionReport(BaseModel):
     professional_name: str

@@ -2,7 +2,7 @@ import os
 from app.database import SessionLocal
 from app import models
 from app.core.security import hash_password, encrypt_data, get_data_hash
-from app.services.auth_service import create_supabase_user
+from app.modules.professionals.services import ProfessionalService
 
 
 def seed_admin():
@@ -53,7 +53,7 @@ def seed_admin():
         }
 
         try:
-            create_supabase_user(email, password, metadata)
+            ProfessionalService.create_supabase_user(email, password, metadata)
         except Exception as e:
             print(f"Aviso: falha ao sincronizar com Supabase Auth: {e}")
 
