@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
     container_name: ninho-backend
     ports:
-      - "8000:8000"
+      - "8005:8000"
     environment:
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
@@ -33,7 +33,7 @@ services:
         # Em dev local, pode ser localhost:8000 se exposto
     container_name: ninho-frontend
     ports:
-      - "3000:3000"
+      - "3005:3000"
     environment:
       - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
