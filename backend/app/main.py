@@ -57,12 +57,12 @@ origins = os.getenv(
 
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    allowed_hosts=os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,187.77.54.131,ninho.pluckstudio.cloud,api-ninho.pluckstudio.cloud,*").split(",")
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"], # Permitir de qualquer lugar temporariamente para resolver o bloqueio
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
