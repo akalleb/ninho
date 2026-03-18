@@ -28,16 +28,16 @@ services:
       args:
         - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
         - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-        - NEXT_PUBLIC_API_URL=http://backend:8000 # Interno para SSR
-        # Para o browser, precisamos da URL pública do backend (no VPS, será o domínio)
-        # Em dev local, pode ser localhost:8000 se exposto
+        # A URL da API deve ser a URL Pública (ex: http://SEU_IP:8005)
+        # O build do Next.js precisa disso para gerar os links corretos no browser
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
     container_name: ninho-frontend
     ports:
       - "3005:3000"
     environment:
       - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-      - NEXT_PUBLIC_API_URL=http://backend:8000
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
     depends_on:
       - backend
     restart: always
