@@ -28,7 +28,7 @@ services:
       args:
         - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
         - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-        # A URL da API deve ser a URL Pública (ex: http://SEU_IP:8005)
+        # A URL da API deve ser a URL Pública (ex: https://api-ninho.pluckstudio.cloud)
         # O build do Next.js precisa disso para gerar os links corretos no browser
         - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
     container_name: ninho-frontend
