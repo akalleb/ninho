@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Statistic, Spin } from 'antd';
 import { CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined, CalendarOutlined } from '@ant-design/icons';
@@ -21,20 +19,8 @@ function PerformanceMatrix({ filters }) {
         if (filters.end_date) params.end_date = filters.end_date;
 
         api.get('/reports/bi/performance', { params })
-            .then(res => {
-                if (res?.data) {
-                    setStats(res.data);
-                }
-            })
-            .catch(err => {
-                console.error("Erro ao carregar performance", err);
-                setStats({
-                    scheduled: 0,
-                    finished: 0,
-                    no_show: 0,
-                    waiting: 0
-                });
-            })
+            .then(res => setStats(res.data))
+            .catch(err => console.error("Erro ao carregar performance", err))
             .finally(() => setLoading(false));
     }, [filters]);
 

@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useState, useEffect } from 'react';
 import { Table, Card, Progress, Spin } from 'antd';
 import api from '../../../config/api/axios';
@@ -69,17 +67,14 @@ function FinancialReport({ filters }) {
 
         api.get('/reports/bi/financial', { params })
             .then(res => {
-                const list = res?.data && Array.isArray(res.data) ? res.data : [];
+                const list = Array.isArray(res.data) ? res.data : [];
                 const tableData = list.map((item, index) => ({
                     key: index,
                     ...item
                 }));
                 setData(tableData);
             })
-            .catch(err => {
-                console.error("Erro ao carregar financeiro", err);
-                setData([]);
-            })
+            .catch(err => console.error("Erro ao carregar financeiro", err))
             .finally(() => setLoading(false));
     }, [filters]);
 

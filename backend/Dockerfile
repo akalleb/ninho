@@ -1,27 +1,32 @@
-FROM python:3.12-slim
+# Base image
+FROM python:3.11-slim
 
+# Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/code/backend
 
-WORKDIR /app
+# Set work directory
+WORKDIR /code/backend
 
-# Install system dependencies (including git if needed for some packages, and libpq for postgres)
-RUN apt-get update && apt-get install -y \
-    build-essential \
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
     libpq-dev \
-    git \
     && rm -rf /var/lib/apt/lists/*
 
+# Install python dependencies
 COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt gunicorn
-
-# Copy the rest of the application
+# Copy project
 COPY . .
+
+# Create media directory for uploads
+RUN mkdir -p /code/backend/media/avatars
 
 # Expose port
 EXPOSE 8000
 
-# Run the application with Gunicorn
-CMD ["gunicorn", "app.main:app", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000"]
+# Run the application
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

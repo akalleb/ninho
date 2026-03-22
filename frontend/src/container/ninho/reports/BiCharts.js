@@ -25,11 +25,11 @@ function BiCharts({ filters }) {
       api.get('/reports/bi/evolution', { params }),
     ])
       .then(([resProd, resEvo]) => {
-        const prodList = resProd?.data && Array.isArray(resProd.data) ? resProd.data : [];
-        const evoList = resEvo?.data && Array.isArray(resEvo.data) ? resEvo.data : [];
+        const prodList = Array.isArray(resProd.data) ? resProd.data : [];
+        const evoList = Array.isArray(resEvo.data) ? resEvo.data : [];
 
-        const categories = prodList.map((item) => item.group || 'Desconhecido');
-        const values = prodList.map((item) => item.count || 0);
+        const categories = prodList.map((item) => item.group);
+        const values = prodList.map((item) => item.count);
 
         setBarCategories(categories);
         setBarSeries([
@@ -39,9 +39,9 @@ function BiCharts({ filters }) {
           },
         ]);
 
-        const evoCategories = evoList.map((item) => item.name || 'N/A');
-        const agendados = evoList.map((item) => item.agendados || 0);
-        const realizados = evoList.map((item) => item.realizados || 0);
+        const evoCategories = evoList.map((item) => item.name);
+        const agendados = evoList.map((item) => item.agendados);
+        const realizados = evoList.map((item) => item.realizados);
 
         setLineCategories(evoCategories);
         setLineSeries([
@@ -55,13 +55,7 @@ function BiCharts({ filters }) {
           },
         ]);
       })
-      .catch((err) => {
-        console.error('Erro ao carregar dados de BI', err);
-        setBarCategories([]);
-        setBarSeries([]);
-        setLineCategories([]);
-        setLineSeries([]);
-      })
+      .catch((err) => console.error('Erro ao carregar dados de BI', err))
       .finally(() => setLoading(false));
   }, [filters]);
 

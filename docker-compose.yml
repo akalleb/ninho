@@ -1,43 +1,37 @@
+version: '3.8'
+
 services:
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: ninho-backend
+    restart: always
     ports:
       - "8005:8000"
+    env_file:
+      - .env
     environment:
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
-      - DATABASE_URL=${DATABASE_URL}
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
-      - FAMILY_DOCS_BUCKET=${FAMILY_DOCS_BUCKET}
-      - CHILD_DOCS_BUCKET=${CHILD_DOCS_BUCKET}
-      - R2_ACCOUNT_ID=${R2_ACCOUNT_ID}
-      - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID}
-      - R2_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY}
-      - R2_BUCKET_NAME=${R2_BUCKET_NAME}
-      - NEXT_PUBLIC_R2_PUBLIC_URL=${NEXT_PUBLIC_R2_PUBLIC_URL}
-    restart: always
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,backend}
+      - CORS_ALLOW_ORIGINS=${CORS_ALLOW_ORIGINS:-http://localhost:3000,http://frontend:3000,http://localhost:80}
+    volumes:
+      - ./backend/media:/code/backend/media
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
         - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
         - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-        # A URL da API deve ser a URL Pública (ex: https://api-ninho.pluckstudio.cloud)
-        # O build do Next.js precisa disso para gerar os links corretos no browser
-        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
     container_name: ninho-frontend
+    restart: always
     ports:
       - "3005:3000"
-    environment:
-      - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_URL}
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+    env_file:
+      - .env
     depends_on:
       - backend
-    restart: always
+
+

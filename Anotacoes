@@ -1,0 +1,90 @@
+# Guia de Teste Local e Deploy (Hostinger VPS)
+
+## 1. Como Testar Localmente (Pelo Terminal / Sem Docker)
+
+**Passo 1.1:** Verifique o seu arquivo `.env` na raiz do projeto.
+Para testes no seu computador, as variáveis de URL devem estar apontando para o seu `localhost`:
+- `NEXT_PUBLIC_API_URL=http://localhost:8000`
+- `CORS_ALLOW_ORIGINS=http://localhost:3000,http://frontend:3000`
+
+**Passo 1.2:** Iniciar o Backend (FastAPI)
+Abra um terminal na raiz do projeto (`f:\python\ninho`) e execute os seguintes comandos:
+```bash
+cd backend
+# Crie e ative um ambiente virtual (Recomendado)
+python -m venv venv
+# No Windows:
+venv\Scripts\activate
+# No Linux/Mac:
+# source venv/bin/activate
+
+# Instale as dependências
+pip install -r requirements.txt
+
+# Inicie o servidor do backend
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+**Passo 1.3:** Iniciar o Frontend (Next.js)
+Abra **outro** terminal na raiz do projeto (mantenha o backend rodando) e execute:
+```bash
+cd frontend
+# Instale as dependências do Node
+npm install
+
+# Inicie o servidor de desenvolvimento
+npm run dev
+```
+
+**Passo 1.4:** Teste a aplicação.
+- **Frontend:** Abra no navegador `http://localhost:3000`
+- **Backend (Documentação API):** Abra `http://localhost:8000/docs`
+
+**Passo 1.5:** Parando a aplicação.
+Quando terminar de testar, vá em cada um dos terminais (do frontend e do backend) e pressione `Ctrl+C` para encerrar os processos.
+
+---
+
+## 2. Como Fazer o Deploy na VPS da Hostinger
+
+**Passo 2.1:** Acesse sua VPS via SSH.
+Abra o terminal do seu computador e conecte-se ao servidor:
+```bash
+ssh root@SEU_IP_DA_VPS
+```
+
+**Passo 2.2:** Envie os arquivos do projeto para a VPS.
+Você pode usar o Git (clonando seu repositório na VPS) ou copiar os arquivos do seu computador. Se usar o Github:
+```bash
+# Na VPS:
+git clone URL_DO_SEU_REPOSITORIO ninho
+cd ninho
+```
+
+**Passo 2.3:** Configure o `.env` de Produção na VPS.
+Crie ou edite o arquivo `.env` na VPS. **Isso é crucial para o app funcionar externamente:**
+```env
+# Exemplo de configuração no .env do servidor
+NEXT_PUBLIC_API_URL=http://SEU_IP_DA_VPS:8000
+CORS_ALLOW_ORIGINS=http://SEU_IP_DA_VPS:3000,http://frontend:3000
+```
+*(Se você já tiver um domínio como `meusite.com`, troque o IP pelo domínio nestas variáveis).*
+
+**Passo 2.4:** Inicie os contêineres em background (Modo Detached).
+Na VPS, dentro da pasta do projeto, execute o Docker Compose. O parâmetro `-d` faz com que rode em segundo plano para não parar quando você fechar o terminal SSH:
+```bash
+docker compose up -d --build
+```
+
+**Passo 2.5:** Verifique o status.
+Para confirmar se tudo subiu sem erros, digite:
+```bash
+docker ps
+```
+Você deverá ver os contêineres `ninho-frontend` (porta 3000) e `ninho-backend` (porta 8000) ativos. Acesse `http://SEU_IP_DA_VPS:3000` no seu navegador para ver a aplicação no ar!
+
+**Passo 2.6 (Próximos Passos para Produção):**
+O seu sistema já estará rodando e acessível pelo IP. Para deixá-lo profissional com um domínio (`https://...`) e cadeado de segurança, futuramente você precisará:
+1. Apontar os DNS do seu domínio na Hostinger para o IP da VPS.
+2. Configurar um Nginx (Proxy Reverso) na VPS para receber os acessos da porta 80/443 e redirecionar para os seus contêineres nas portas 3000/8000.
+3. Instalar o Certbot (Let's Encrypt) para gerar o certificado SSL gratuito.

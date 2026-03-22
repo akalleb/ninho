@@ -8,22 +8,26 @@ const AuthLayout = (WraperContent) => {
   return function () {
     return (
       <Row>
-        <Col xxl={12} xl={12} lg={12} md={8} xs={24}>
+        <Col xxl={8} xl={9} lg={12} md={8} xs={24}>
           <Aside>
-            <img src={getImageUrl('static/img/auth/topShape.png')} alt="" className="topShape" />
-            <img src={getImageUrl('static/img/auth/bottomShape.png')} alt="" className="bottomShape" />
-            <Content>
-              <img className="logo-image" src={getImageUrl('static/img/Logo_Dark.svg')} alt="" />
-              <img
-                className="auth-content-figure"
-                src={getImageUrl('static/img/auth/Illustration.png')}
-                alt=""
-              />
-            </Content>
+            <div className="auth-side-content">
+              <img src={getImageUrl('static/img/auth/topShape.png')} alt="" className="topShape" />
+              <img src={getImageUrl('static/img/auth/bottomShape.png')} alt="" className="bottomShape" />
+              <Content>
+                <img className="w-150px" src={getImageUrl('static/img/Logo_Dark.svg')} alt="" />
+                <br />
+                <br />
+                <img
+                  className="auth-content-figure"
+                  src={getImageUrl('static/img/auth/Illustration.png')}
+                  alt=""
+                />
+              </Content>
+            </div>
           </Aside>
         </Col>
 
-        <Col xxl={12} xl={12} lg={12} md={16} xs={24}>
+        <Col xxl={16} xl={15} lg={12} md={16} xs={24}>
           <WraperContent />
         </Col>
       </Row>

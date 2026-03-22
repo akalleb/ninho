@@ -146,10 +146,7 @@ function WalletDetails({ walletId }) {
 
   const fixedStaff = useMemo(() => {
     return professionals.filter(
-      (p) =>
-        p &&
-        (p.status || 'active') === 'active' &&
-        (p.role === 'admin' || p.role === 'operational' || p.role === 'health'),
+      (p) => p && (p.status || 'active') === 'active' && (p.role === 'admin' || p.role === 'operational'),
     );
   }, [professionals]);
 
@@ -856,7 +853,7 @@ function WalletDetails({ walletId }) {
                                         </Col>
                                     </Row>
                                     <Card
-                                      title="Equipe fixa (Gestor / Operacional / Saúde)"
+                                      title="Equipe fixa (Gestor / Operacional)"
                                       variant="borderless"
                                       style={{ marginBottom: 16 }}
                                       extra={
@@ -872,61 +869,53 @@ function WalletDetails({ walletId }) {
                                       />
                                     </Card>
                                     {payrollLoading ? (
-                                      <div style={{ display: 'flex', justifyContent: 'center', padding: 24 }}>
-                                        <Spin />
-                                      </div>
-                                    ) : payrollRows.length ? (
-                                      <Table
-                                        dataSource={payrollRows}
-                                        columns={payrollColumns}
-                                        pagination={{ pageSize: 8 }}
-                                        expandable={{
-                                          expandedRowRender: (record) => (
-                                            <Table
-                                              dataSource={record.expenses.map((x) => ({
-                                                key: String(x.expense.id),
-                                                expense: x.expense,
-                                                attendance: x.attendance,
-                                              }))}
-                                              pagination={false}
-                                              columns={[
-                                                {
-                                                  title: 'Criança',
-                                                  key: 'child',
-                                                  render: (_, row) => row.attendance?.child?.name || '—',
-                                                },
-                                                {
-                                                  title: 'Atendimento',
-                                                  key: 'attendance',
-                                                  render: (_, row) => `#${row.expense.attendance_id}`,
-                                                },
-                                                {
-                                                  title: 'Valor',
-                                                  key: 'amount',
-                                                  render: (_, row) => (
-                                                    <span style={{ color: '#cf1322', fontWeight: 600 }}>
-                                                      R$ {(row.expense.amount || 0).toLocaleString('pt-BR', {
-                                                        minimumFractionDigits: 2,
-                                                      })}
-                                                    </span>
-                                                  ),
-                                                },
-                                                {
-                                                  title: 'Status',
-                                                  key: 'status',
-                                                  render: () => <Tag color="warning">PENDENTE</Tag>,
-                                                },
-                                              ]}
-                                            />
-                                          ),
-                                        }}
-                                      />
-                                    ) : (
-                                      <Card variant="borderless">
-                                        <div style={{ padding: 16, color: '#888' }}>
-                                          Nenhum pagamento pendente por atendimento neste período.
+                                        <div style={{ display: 'flex', justifyContent: 'center', padding: 24 }}>
+                                            <Spin />
                                         </div>
-                                      </Card>
+                                    ) : (
+                                        <Table
+                                            dataSource={payrollRows}
+                                            columns={payrollColumns}
+                                            pagination={{ pageSize: 8 }}
+                                            expandable={{
+                                              expandedRowRender: (record) => (
+                                                <Table
+                                                  dataSource={record.expenses.map((x) => ({
+                                                    key: String(x.expense.id),
+                                                    expense: x.expense,
+                                                    attendance: x.attendance,
+                                                  }))}
+                                                  pagination={false}
+                                                  columns={[
+                                                    {
+                                                      title: 'Criança',
+                                                      key: 'child',
+                                                      render: (_, row) => row.attendance?.child?.name || '—',
+                                                    },
+                                                    {
+                                                      title: 'Atendimento',
+                                                      key: 'attendance',
+                                                      render: (_, row) => `#${row.expense.attendance_id}`,
+                                                    },
+                                                    {
+                                                      title: 'Valor',
+                                                      key: 'amount',
+                                                      render: (_, row) => (
+                                                        <span style={{ color: '#cf1322', fontWeight: 600 }}>
+                                                          R$ {(row.expense.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                        </span>
+                                                      ),
+                                                    },
+                                                    {
+                                                      title: 'Status',
+                                                      key: 'status',
+                                                      render: () => <Tag color="warning">PENDENTE</Tag>,
+                                                    },
+                                                  ]}
+                                                />
+                                              ),
+                                            }}
+                                        />
                                     )}
                                 </div>
                             )

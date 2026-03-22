@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Table, Button, Modal, Form, Select, DatePicker, Tag, Input, Popconfirm, Tooltip, App } from 'antd';
+import { Row, Col, Card, Table, Button, Modal, Form, Select, DatePicker, Tag, Input, Popconfirm, Tooltip, App, Alert } from 'antd';
 import FeatherIcon from 'feather-icons-react';
 import { PageHeader } from '../../../src/components/page-headers/page-headers';
 import { Main } from '../../../src/container/styled';
@@ -11,40 +11,38 @@ import dayjs from 'dayjs';
 const { Option } = Select;
 
 function QueuePage() {
+    // State
     const [queue, setQueue] = useState([]);
     const [children, setChildren] = useState([]);
     const [professionals, setProfessionals] = useState([]);
     const [wallets, setWallets] = useState([]);
-    const [referrals, setReferrals] = useState([]);
+    
+    // Modal State
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
-    const [loadingReferrals, setLoadingReferrals] = useState(false);
     const { message } = App.useApp();
 
+    // Fetch Data
     const fetchData = async () => {
         setLoading(true);
-        setLoadingReferrals(true);
         try {
-            const [qRes, cRes, pRes, wRes, rRes] = await Promise.all([
+            const [qRes, cRes, pRes, wRes] = await Promise.all([
                 api.get('/queue/'),
                 api.get('/children/'),
                 api.get('/professionals/basic'),
-                api.get('/wallets/'),
-                api.get('/health-referrals/')
+                api.get('/wallets/')
             ]);
             setQueue(qRes.data);
             setChildren(cRes.data);
             setProfessionals(pRes.data);
             setWallets(wRes.data);
-            setReferrals(rRes.data);
         } catch (error) {
             message.error('Erro ao carregar dados.');
             console.error(error);
         } finally {
             setLoading(false);
-            setLoadingReferrals(false);
         }
     };
 
@@ -52,6 +50,7 @@ function QueuePage() {
         fetchData();
     }, []);
 
+    // Handle Open Modal
     const handleOpenModal = (item = null) => {
         setEditingItem(item);
         if (item) {
@@ -69,6 +68,7 @@ function QueuePage() {
         setIsModalVisible(true);
     };
 
+    // Handle Submit
     const handleOk = async () => {
         try {
             const values = await form.validateFields();
@@ -109,6 +109,7 @@ function QueuePage() {
         }
     };
 
+    // Handle Delete
     const handleDelete = async (id) => {
         try {
             await api.delete(`/attendances/${id}`);
@@ -119,6 +120,7 @@ function QueuePage() {
         }
     };
 
+    // Table Columns
     const columns = [
         {
             title: 'Criança',
@@ -197,104 +199,6 @@ function QueuePage() {
         }
     ];
 
-    const referralColumns = [
-        {
-            title: 'Criança',
-            dataIndex: 'child_id',
-            key: 'child',
-            render: (childId) => {
-                const child = children.find(c => c.id === childId);
-                return <span style={{ fontWeight: 600 }}>{child ? child.name : 'N/A'}</span>;
-            },
-        },
-        {
-            title: 'Especialidade',
-            dataIndex: 'specialty',
-            key: 'specialty',
-        },
-        {
-            title: 'Profissional indicado',
-            dataIndex: 'professional_name',
-            key: 'professional_name',
-            render: (text) => text || '-',
-        },
-        {
-            title: 'Data do encaminhamento',
-            dataIndex: 'referral_date',
-            key: 'referral_date',
-            render: (date) => (date ? dayjs(date).format('DD/MM/YYYY') : '-'),
-        },
-        {
-            title: 'Prioridade',
-            dataIndex: 'priority',
-            key: 'priority',
-            render: (priority) => {
-                let color = 'default';
-                let text = 'Média';
-                if (priority === 'low') {
-                    color = 'blue';
-                    text = 'Baixa';
-                } else if (priority === 'medium') {
-                    color = 'gold';
-                    text = 'Média';
-                } else if (priority === 'high') {
-                    color = 'red';
-                    text = 'Alta';
-                }
-                return <Tag color={color}>{text}</Tag>;
-            },
-        },
-        {
-            title: 'Status',
-            dataIndex: 'status',
-            key: 'status',
-            render: (status) => {
-                let color = 'orange';
-                let text = 'Pendente';
-                if (status === 'scheduled') {
-                    color = 'blue';
-                    text = 'Agendado';
-                } else if (status === 'completed') {
-                    color = 'green';
-                    text = 'Concluído';
-                } else if (status === 'canceled') {
-                    color = 'red';
-                    text = 'Cancelado';
-                }
-                return <Tag color={color}>{text}</Tag>;
-            },
-        },
-        {
-            title: 'Ações',
-            key: 'actions',
-            render: (_, record) => (
-                <div style={{ display: 'flex', gap: '8px' }}>
-                    <Select
-                        size="small"
-                        value={record.status}
-                        style={{ width: 130 }}
-                        onChange={(value) => handleReferralStatusChange(record.id, value)}
-                    >
-                        <Option value="pending">Pendente</Option>
-                        <Option value="scheduled">Agendado</Option>
-                        <Option value="completed">Concluído</Option>
-                        <Option value="canceled">Cancelado</Option>
-                    </Select>
-                </div>
-            ),
-        },
-    ];
-
-    const handleReferralStatusChange = async (id, status) => {
-        try {
-            await api.put(`/health-referrals/${id}`, { status });
-            message.success('Status do encaminhamento atualizado.');
-            fetchData();
-        } catch (error) {
-            message.error('Erro ao atualizar status do encaminhamento.');
-        }
-    };
-
     return (
         <>
             <PageHeader
@@ -309,24 +213,12 @@ function QueuePage() {
             <Main>
                 <Row gutter={25}>
                     <Col xs={24}>
-                        <Card variant="borderless" title="Fila e Agendamentos">
+                        <Card variant="borderless">
                             <Table 
                                 dataSource={queue} 
                                 columns={columns} 
                                 rowKey="id" 
                                 loading={loading}
-                            />
-                        </Card>
-                    </Col>
-                </Row>
-                <Row gutter={25} style={{ marginTop: 25 }}>
-                    <Col xs={24}>
-                        <Card variant="borderless" title="Encaminhamentos de Saúde">
-                            <Table
-                                dataSource={referrals}
-                                columns={referralColumns}
-                                rowKey="id"
-                                loading={loadingReferrals}
                             />
                         </Card>
                     </Col>
