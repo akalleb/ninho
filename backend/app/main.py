@@ -54,10 +54,11 @@ origins = os.getenv(
     "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173",
 ).split(",")
 
-app.add_middleware(
-    TrustedHostMiddleware,
-    allowed_hosts=os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,187.77.54.131,ninho.pluckstudio.cloud,api-ninho.pluckstudio.cloud,*").split(",")
-)
+# Remover temporariamente o TrustedHostMiddleware que está bloqueando conexões do Nginx
+# app.add_middleware(
+#     TrustedHostMiddleware,
+#     allowed_hosts=os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,187.77.54.131,ninho.pluckstudio.cloud,api-ninho.pluckstudio.cloud,*").split(",")
+# )
 
 app.add_middleware(
     CORSMiddleware,
