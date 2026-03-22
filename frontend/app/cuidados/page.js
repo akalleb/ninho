@@ -132,7 +132,7 @@ function CareDashboard() {
                 <Row gutter={25} style={{ marginTop: 25 }}>
                     <Col xs={24} lg={12}>
                         <Card title="Próximos Atendimentos" variant="borderless" style={{ height: '100%' }}>
-                            {queuePreview.length > 0 ? (
+                            {queuePreview?.length > 0 ? (
                                 <List
                                     itemLayout="horizontal"
                                     dataSource={queuePreview}
@@ -156,7 +156,7 @@ function CareDashboard() {
                     </Col>
                     <Col xs={24} lg={12}>
                         <Card title="Atividades Recentes (Evoluções)" variant="borderless" style={{ height: '100%' }}>
-                             {recentActivity.length > 0 ? (
+                             {recentActivity?.length > 0 ? (
                                 <List
                                     itemLayout="horizontal"
                                     dataSource={recentActivity}

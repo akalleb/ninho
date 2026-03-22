@@ -26,8 +26,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ninho_api")
 
-models.Base.metadata.create_all(bind=database.engine)
-database.ensure_schema()
+
 
 app = FastAPI(title="Sistema Ninho API")
 

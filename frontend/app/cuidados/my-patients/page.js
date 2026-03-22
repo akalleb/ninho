@@ -193,7 +193,7 @@ function MyPatientsPage() {
                                         label: 'Atribuídos a mim (Hoje)',
                                         children: (
                                             <>
-                                                {professionalId && !loadingToday && attendances.length === 0 ? (
+                                                {professionalId && !loadingToday && attendances?.length === 0 ? (
                                                     <Alert
                                                         type="info"
                                                         showIcon
@@ -287,7 +287,7 @@ function MyPatientsPage() {
                                     },
                                     {
                                         key: 'history',
-                                        label: `Histórico (${allPatients.length})`,
+                                        label: `Histórico (${allPatients?.length || 0})`,
                                         children: (
                                             <List
                                                 loading={loadingAllPatients}

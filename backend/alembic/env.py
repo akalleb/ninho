@@ -27,15 +27,15 @@ from app import models  # Import models to register them with Base.metadata
 target_metadata = Base.metadata
 
 def get_url():
-    """Get database URL from environment, or fallback to sqlite"""
+    """Get database URL from environment"""
     from dotenv import load_dotenv
     load_dotenv()
     url = os.getenv("DATABASE_URL")
-    if url:
-        if url.startswith("postgres://"):
-            url = url.replace("postgres://", "postgresql://", 1)
-        return url
-    return "sqlite:///./sql_app.db"
+    if not url:
+        raise ValueError("DATABASE_URL is not set in environment or .env file.")
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
+    return url
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""

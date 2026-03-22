@@ -69,14 +69,17 @@ function FinancialReport({ filters }) {
 
         api.get('/reports/bi/financial', { params })
             .then(res => {
-                const list = Array.isArray(res.data) ? res.data : [];
+                const list = res?.data && Array.isArray(res.data) ? res.data : [];
                 const tableData = list.map((item, index) => ({
                     key: index,
                     ...item
                 }));
                 setData(tableData);
             })
-            .catch(err => console.error("Erro ao carregar financeiro", err))
+            .catch(err => {
+                console.error("Erro ao carregar financeiro", err);
+                setData([]);
+            })
             .finally(() => setLoading(false));
     }, [filters]);
 

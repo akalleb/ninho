@@ -29,10 +29,10 @@ function ReportsDashboard() {
       key: 'clinical',
       label: 'Produção Clínica',
       children: (
-        <>
+        <div>
           <BiCharts filters={filters} />
           <PerformanceMatrix filters={filters} />
-        </>
+        </div>
       ),
     },
     {
@@ -53,7 +53,7 @@ function ReportsDashboard() {
   ];
 
   return (
-    <>
+    <div>
       <PageHeader
         ghost
         title="Relatórios Gerenciais e Exportação SUS"
@@ -78,7 +78,7 @@ function ReportsDashboard() {
           </Col>
         </Row>
       </Main>
-    </>
+    </div>
   );
 }
 

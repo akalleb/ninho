@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+// import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Row, Col, Card, Spin } from 'antd';
 import api from '../../../config/api/axios';
 
@@ -14,17 +14,21 @@ function Demographics({ filters }) {
 
     useEffect(() => {
         setLoading(true);
-        const params = {}; // Filters can be added here if backend supports
+        const params = {}; 
 
         Promise.all([
             api.get('/reports/bi/demographics', { params: { type: 'diagnosis' } }),
             api.get('/reports/bi/demographics', { params: { type: 'age' } })
         ]).then(([resDiag, resAge]) => {
-            const diagList = Array.isArray(resDiag.data) ? resDiag.data : [];
-            const ageList = Array.isArray(resAge.data) ? resAge.data : [];
-            setDataDiagnosis(diagList.map(d => ({ name: d.category, value: d.count })));
-            setDataAge(ageList.map(d => ({ name: d.category, value: d.count })));
-        }).catch(err => console.error("Erro ao carregar demografia", err))
+            const diagList = resDiag?.data && Array.isArray(resDiag.data) ? resDiag.data : [];
+            const ageList = resAge?.data && Array.isArray(resAge.data) ? resAge.data : [];
+            setDataDiagnosis(diagList.map(d => ({ name: d.category || 'Outros', value: d.count || 0 })));
+            setDataAge(ageList.map(d => ({ name: d.category || 'Outros', value: d.count || 0 })));
+        }).catch(err => {
+            console.error("Erro ao carregar demografia", err);
+            setDataDiagnosis([]);
+            setDataAge([]);
+        })
           .finally(() => setLoading(false));
 
     }, [filters]);
@@ -34,51 +38,14 @@ function Demographics({ filters }) {
              <Col xs={24} md={12}>
                 <Card title="Distribuição por Diagnóstico (CID)" variant="borderless">
                     {loading ? <div style={{ textAlign: 'center', padding: 50 }}><Spin /></div> : (
-                        <ResponsiveContainer width="100%" height={300}>
-                            <PieChart>
-                                <Pie
-                                    data={dataDiagnosis}
-                                    cx="50%"
-                                    cy="50%"
-                                    labelLine={false}
-                                    outerRadius={100}
-                                    fill="#8884d8"
-                                    dataKey="value"
-                                >
-                                    {dataDiagnosis.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip />
-                                <Legend />
-                            </PieChart>
-                        </ResponsiveContainer>
+                        <div>Chart removed for testing</div>
                     )}
                 </Card>
              </Col>
              <Col xs={24} md={12}>
                 <Card title="Faixa Etária" variant="borderless">
                     {loading ? <div style={{ textAlign: 'center', padding: 50 }}><Spin /></div> : (
-                        <ResponsiveContainer width="100%" height={300}>
-                            <PieChart>
-                                <Pie
-                                    data={dataAge}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={60}
-                                    outerRadius={100}
-                                    fill="#8884d8"
-                                    paddingAngle={5}
-                                    dataKey="value"
-                                >
-                                    {dataAge.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip />
-                                <Legend />
-                            </PieChart>
-                        </ResponsiveContainer>
+                        <div>Chart removed for testing</div>
                     )}
                 </Card>
              </Col>

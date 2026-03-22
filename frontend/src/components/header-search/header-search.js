@@ -10,7 +10,7 @@ import { Popover } from '../popup/popup';
 
 const HeaderSearch = ({ darkMode }) => {
   const dispatch = useDispatch();
-  const searchData = useSelector(state => state.headerSearchData);
+  const searchData = useSelector(state => state.headerSearchData || []);
   const rtl = useSelector(state => state.ChangeLayoutMode.rtlData);
 
   const search = e => {

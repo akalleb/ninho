@@ -24,14 +24,17 @@ function SusExport({ filters }) {
         setLoading(true);
         api.get('/reports/validate/sus')
             .then(res => {
-                const list = Array.isArray(res.data) ? res.data : [];
+                const list = res?.data && Array.isArray(res.data) ? res.data : [];
                 const data = list.map((item, index) => ({
                     key: index,
                     ...item
                 }));
                 setValidationData(data);
             })
-            .catch(err => console.error("Erro na validação SUS", err))
+            .catch(err => {
+                console.error("Erro na validação SUS", err);
+                setValidationData([]);
+            })
             .finally(() => setLoading(false));
     }, []);
 
