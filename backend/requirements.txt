@@ -3,7 +3,7 @@ uvicorn
 sqlalchemy
 psycopg2-binary
 python-dotenv
-pydantic
+pydantic[email]
 supabase
 alembic
 python-jose[cryptography]
