@@ -6,3 +6,7 @@ python-dotenv
 pydantic
 supabase
 alembic
+python-jose[cryptography]
+passlib
+bcrypt
+python-multipart
