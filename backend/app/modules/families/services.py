@@ -211,8 +211,18 @@ class FamilyService:
     
     @staticmethod
     def bulk_add_assistance(db: Session, request: BulkAssistanceRequest):
+        target_ids = set(request.family_ids or [])
+        
+        # If group_id is provided, add all families from that group
+        if request.group_id:
+            group_families = db.query(family_groups.c.family_id).filter(
+                family_groups.c.group_id == request.group_id
+            ).all()
+            for (fid,) in group_families:
+                target_ids.add(fid)
+        
         new_records = []
-        for family_id in request.family_ids:
+        for family_id in target_ids:
             db_assistance = FamilyAssistance(
                 family_id=family_id,
                 **request.assistance.model_dump()
@@ -259,6 +269,13 @@ class GroupService:
         db.commit()
         db.refresh(db_group)
         return db_group
+
+    @staticmethod
+    def delete_group(db: Session, group_id: int):
+        group = GroupService.get_group(db, group_id)
+        db.delete(group)
+        db.commit()
+        return {"message": "Grupo excluído com sucesso"}
 
     @staticmethod
     def list_groups(db: Session) -> List[Group]:

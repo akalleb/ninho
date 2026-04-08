@@ -66,6 +66,8 @@ function Families() {
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [groups, setGroups] = useState([]);
+  const [familyGroups, setFamilyGroups] = useState([]);
+  const [isGroupsLoading, setIsGroupsLoading] = useState(false);
   const [isSubmittingBulk, setIsSubmittingBulk] = useState(false);
   
   const router = useRouter();
@@ -132,6 +134,42 @@ function Families() {
      setSelectedFamily(record);
      setIsModalOpen(true);
      fetchHistory(record.id);
+     fetchFamilyGroups(record.id);
+  };
+
+  const fetchFamilyGroups = async (familyId) => {
+    setIsGroupsLoading(true);
+    try {
+      // Assuming families has groups populated or we need a specific call
+      // For now, let's fetch the family again or assume it's in the record if backend supports it
+      // Better yet, let's have a specific endpoint or just check the family record
+      const { data } = await api.get(`/families/${familyId}`);
+      setFamilyGroups(data.groups || []);
+    } catch (error) {
+      console.error('Erro ao carregar grupos da família', error);
+    } finally {
+      setIsGroupsLoading(false);
+    }
+  };
+
+  const handleAddFamilyToGroup = async (groupId) => {
+    try {
+      await api.post(`/families/groups/${groupId}/families/${selectedFamily.id}`);
+      notification.success({ message: 'Família adicionada ao grupo' });
+      fetchFamilyGroups(selectedFamily.id);
+    } catch (error) {
+      notification.error({ message: 'Erro ao adicionar ao grupo', description: error.message });
+    }
+  };
+
+  const handleRemoveFamilyFromGroup = async (groupId) => {
+    try {
+      await api.delete(`/families/groups/${groupId}/families/${selectedFamily.id}`);
+      notification.success({ message: 'Família removida do grupo' });
+      fetchFamilyGroups(selectedFamily.id);
+    } catch (error) {
+      notification.error({ message: 'Erro ao remover do grupo', description: error.message });
+    }
   };
 
   const fetchHistory = async (familyId) => {
@@ -175,10 +213,16 @@ function Families() {
     setIsSubmittingBulk(true);
     try {
       await api.post('/families/bulk-assistance', {
-        family_ids: selectedRowKeys,
-        assistance: values
+        family_ids: selectedRowKeys.length > 0 ? selectedRowKeys : null,
+        group_id: values.group_id,
+        assistance: {
+          assistance_type: values.assistance_type,
+          description: values.description,
+          date_provided: values.date_provided,
+          quantity: values.quantity || 1
+        }
       });
-      notification.success({ message: `Assistência registrada para ${selectedRowKeys.length} famílias.` });
+      notification.success({ message: 'Assistência em massa registrada com sucesso.' });
       setIsBulkModalOpen(false);
       bulkForm.resetFields();
       setSelectedRowKeys([]);
@@ -435,7 +479,7 @@ function Families() {
                 <FeatherIcon icon="download" size={14} /> Exportar CSV
             </Button>
           </CSVLink>,
-          <Button key="bulk-action" type="default" danger onClick={() => setIsBulkModalOpen(true)} disabled={selectedRowKeys.length === 0}>
+          <Button key="bulk-action" type="default" danger onClick={() => setIsBulkModalOpen(true)}>
              <FeatherIcon icon="layers" size={14} /> Ação em Massa ({selectedRowKeys.length})
           </Button>,
           <Button key="1" type="primary" onClick={() => router.push('/admin/families/add')}>
@@ -566,7 +610,9 @@ function Families() {
               </Tabs.TabPane>
               
               <Tabs.TabPane tab="Histórico de Assistência" key="2">
+                {/* ... existing history content ... */}
                 <Cards headless title="Registrar Nova Assistência">
+                  {/* ... form content ... */}
                   <Form form={form} layout="vertical" onFinish={handleAddAssistance}>
                     <Row gutter={16}>
                       <Col span={8}>
@@ -636,6 +682,43 @@ function Families() {
                   )}
                 </div>
               </Tabs.TabPane>
+              
+              <Tabs.TabPane tab="Grupos" key="3">
+                <Cards headless title="Vincular a um Grupo">
+                    <Select 
+                      style={{ width: '100%', marginBottom: 15 }} 
+                      placeholder="Selecionar grupo para adicionar"
+                      onChange={handleAddFamilyToGroup}
+                      value={null}
+                    >
+                      {groups
+                        .filter(g => !familyGroups.some(fg => fg.id === g.id))
+                        .map(g => (
+                          <Option key={g.id} value={g.id}>{g.name}</Option>
+                        ))
+                      }
+                    </Select>
+                    
+                    <h4>Grupos Vinculados</h4>
+                    {isGroupsLoading ? <Skeleton active /> : (
+                      <List
+                        dataSource={familyGroups}
+                        renderItem={item => (
+                          <List.Item
+                            actions={[
+                              <Popconfirm title="Remover família deste grupo?" onConfirm={() => handleRemoveFamilyFromGroup(item.id)}>
+                                <Button type="link" danger>Remover</Button>
+                              </Popconfirm>
+                            ]}
+                          >
+                            <List.Item.Meta title={item.name} description={item.category} />
+                          </List.Item>
+                        )}
+                        locale={{ emptyText: 'Esta família não está vinculada a nenhum grupo.' }}
+                      />
+                    )}
+                </Cards>
+              </Tabs.TabPane>
             </Tabs>
           )}
         </Modal>
@@ -648,10 +731,19 @@ function Families() {
           width={700}
         >
           <div style={{ marginBottom: 20 }}>
-            <Tag color="blue">Registrando para {selectedRowKeys.length} famílias selecionadas</Tag>
+            <Tag color="blue">Registrando para {selectedRowKeys.length} famílias selecionadas e/ou integradores de Grupo</Tag>
           </div>
           <Form form={bulkForm} layout="vertical" onFinish={handleBulkAssistance}>
             <Row gutter={16}>
+              <Col span={24}>
+                <Form.Item name="group_id" label="Aplicar para todo o Grupo (Opcional)">
+                  <Select placeholder="Selecione um grupo para aplicar a todos os seus membros" allowClear>
+                    {groups.map(g => (
+                      <Option key={g.id} value={g.id}>{g.name}</Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col>
               <Col span={12}>
                 <Form.Item name="assistance_type" label="Tipo de Assistência" rules={[{ required: true }]}>
                   <Select placeholder="Selecione o tipo">

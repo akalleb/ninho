@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Table, Button, Input, Modal, Form, App, Tag, Cards, Skeleton } from 'antd';
+import { Row, Col, Table, Button, Input, Modal, Form, App, Tag, Cards, Skeleton, Select, Popconfirm } from 'antd';
 import FeatherIcon from 'feather-icons-react';
 import { PageHeader } from '../../../components/page-headers/page-headers';
 import { Main } from '../../styled';
@@ -13,6 +13,14 @@ function Groups() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [form] = Form.useForm();
   
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
+  
+  const [allFamilies, setAllFamilies] = useState([]);
+  const [isAddingMember, setIsAddingMember] = useState(false);
+
   const { notification } = App.useApp();
 
   const fetchGroups = async () => {
@@ -27,8 +35,67 @@ function Groups() {
     }
   };
 
+  const fetchAllFamilies = async () => {
+    try {
+      const { data } = await api.get('/families/?limit=2000');
+      setAllFamilies(data);
+    } catch (error) {
+      console.error('Erro ao carregar famílias para busca', error);
+    }
+  };
+
+  const fetchMembers = async (group) => {
+    setSelectedGroup(group);
+    setIsMembersModalOpen(true);
+    setMembersLoading(true);
+    try {
+      const { data } = await api.get(`/families/groups/${group.id}/families`);
+      setMembers(data);
+    } catch (error) {
+      notification.error({ message: 'Erro ao carregar integrantes', description: error.message });
+    } finally {
+      setMembersLoading(false);
+    }
+  };
+
+  const handleDeleteGroup = async (groupId) => {
+    try {
+      await api.delete(`/families/groups/${groupId}`);
+      notification.success({ message: 'Grupo excluído com sucesso' });
+      fetchGroups();
+    } catch (error) {
+      notification.error({ message: 'Erro ao excluir grupo', description: error.message });
+    }
+  };
+
+  const handleAddMember = async (familyId) => {
+    if (!selectedGroup) return;
+    setIsAddingMember(true);
+    try {
+      await api.post(`/families/groups/${selectedGroup.id}/families/${familyId}`);
+      notification.success({ message: 'Família adicionada com sucesso' });
+      fetchMembers(selectedGroup); // Refresh list
+    } catch (error) {
+      notification.error({ message: 'Erro ao adicionar família', description: error.message });
+    } finally {
+      setIsAddingMember(false);
+    }
+  };
+
+  const handleRemoveMember = async (familyId) => {
+    if (!selectedGroup) return;
+    try {
+      await api.delete(`/families/groups/${selectedGroup.id}/families/${familyId}`);
+      notification.success({ message: 'Família removida com sucesso' });
+      fetchMembers(selectedGroup); // Refresh list
+    } catch (error) {
+      notification.error({ message: 'Erro ao remover família', description: error.message });
+    }
+  };
+
   useEffect(() => {
     fetchGroups();
+    fetchAllFamilies();
   }, []);
 
   const handleCreateGroup = async (values) => {
@@ -51,6 +118,20 @@ function Groups() {
     { title: 'Categoria', dataIndex: 'category', key: 'category', render: (cat) => <Tag color="blue">{cat || 'Geral'}</Tag> },
     { title: 'Descrição', dataIndex: 'description', key: 'description' },
     { title: 'Criado em', dataIndex: 'created_at', key: 'created_at', render: (date) => new Date(date).toLocaleDateString() },
+    {
+      title: 'Ações',
+      key: 'actions',
+      render: (_, record) => (
+        <div style={{ display: 'flex', gap: 10 }}>
+          <Button size="small" onClick={() => fetchMembers(record)}>
+            <FeatherIcon icon="users" size={14} style={{ marginRight: 5 }} /> Ver Integrantes
+          </Button>
+          <Popconfirm title="Excluir este grupo definitivamente?" onConfirm={() => handleDeleteGroup(record.id)}>
+              <Button size="small" type="primary" danger icon={<FeatherIcon icon="trash-2" size={14} />} />
+          </Popconfirm>
+        </div>
+      )
+    }
   ];
 
   return (
@@ -78,6 +159,56 @@ function Groups() {
             </div>
           </Col>
         </Row>
+
+        <Modal
+          title={`Integrantes do Grupo: ${selectedGroup?.name}`}
+          open={isMembersModalOpen}
+          onCancel={() => setIsMembersModalOpen(false)}
+          footer={[<Button key="close" onClick={() => setIsMembersModalOpen(false)}>Fechar</Button>]}
+          width={800}
+        >
+          <div style={{ marginBottom: 20 }}>
+              <h4>Adicionar Nova Família ao Grupo</h4>
+              <Select
+                showSearch
+                style={{ width: '100%' }}
+                placeholder="Pesquise pelo nome do responsável ou CPF"
+                optionFilterProp="children"
+                onChange={handleAddMember}
+                loading={isAddingMember}
+                filterOption={(input, option) =>
+                    (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                }
+                options={allFamilies.map(f => ({
+                    value: f.id,
+                    label: `${f.name_responsible} (${f.cpf})`
+                }))}
+              />
+          </div>
+
+          <hr style={{ border: '0.5px solid #eee', marginBottom: 20 }} />
+
+          {membersLoading ? <Skeleton active /> : (
+            <Table
+              dataSource={members}
+              rowKey="id"
+              columns={[
+                { title: 'Nome do Responsável', dataIndex: 'name_responsible', key: 'name' },
+                { title: 'Bairro', dataIndex: 'neighborhood', key: 'neighborhood' },
+                {
+                    title: 'Ação',
+                    key: 'action',
+                    render: (_, record) => (
+                        <Popconfirm title="Remover este integrante do grupo?" onConfirm={() => handleRemoveMember(record.id)}>
+                            <Button type="link" danger icon={<FeatherIcon icon="user-minus" size={14} />} />
+                        </Popconfirm>
+                    )
+                }
+              ]}
+              pagination={{ pageSize: 5 }}
+            />
+          )}
+        </Modal>
 
         <Modal
           title="Criar Novo Grupo"

@@ -109,5 +109,6 @@ class GroupResponse(GroupBase):
         from_attributes = True
 
 class BulkAssistanceRequest(BaseModel):
-    family_ids: List[str]
+    family_ids: Optional[List[str]] = None
+    group_id: Optional[int] = None
     assistance: FamilyAssistanceCreate

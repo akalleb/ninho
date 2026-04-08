@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "bash -lc 'set -a; source ../.env; set +a; next dev'",
-    "build": "bash -lc 'set -a; source ../.env; set +a; next build'",
+    "dev": "next dev",
+    "build": "next build",
     "start": "bash -lc 'set -a; source ../.env; set +a; next start'",
     "lint": "eslint .",
     "smoke:routes": "bash scripts/smoke-routes.sh"

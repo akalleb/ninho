@@ -60,6 +60,14 @@ def create_group(
 ):
     return GroupService.create_group(db, group)
 
+@router.delete("/groups/{group_id}")
+def delete_group(
+    group_id: int,
+    db: Session = Depends(database.get_db),
+    current_user=Depends(get_current_admin_or_operational),
+):
+    return GroupService.delete_group(db, group_id)
+
 @router.post("/bulk-assistance")
 def bulk_add_assistance(
     request: BulkAssistanceRequest,
