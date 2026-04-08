@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Table, Button, Input, Select, Tag, App, Tooltip, Skeleton, Popconfirm, Statistic, Modal, Descriptions } from 'antd';
+import { Row, Col, Table, Button, Input, Select, Tag, App, Tooltip, Skeleton, Popconfirm, Statistic, Modal, Descriptions, Tabs, Form, DatePicker, InputNumber, List } from 'antd';
 import FeatherIcon from 'feather-icons-react';
 import { useRouter } from 'next/navigation';
 import { CSVLink } from 'react-csv';
@@ -57,6 +57,16 @@ function Families() {
   });
   const [selectedFamily, setSelectedFamily] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [isSubmittingHistory, setIsSubmittingHistory] = useState(false);
+  const [form] = Form.useForm();
+  const [bulkForm] = Form.useForm();
+  
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [groups, setGroups] = useState([]);
+  const [isSubmittingBulk, setIsSubmittingBulk] = useState(false);
   
   const router = useRouter();
   const { notification } = App.useApp();
@@ -101,13 +111,94 @@ function Families() {
     }
   };
 
+  const fetchGroups = async () => {
+    try {
+      const { data } = await api.get('/families/groups');
+      setGroups(data);
+    } catch (error) {
+      console.error('Erro ao carregar grupos', error);
+    }
+  };
+
   useEffect(() => {
     fetchFamilies();
   }, [filters]);
 
+  useEffect(() => {
+    fetchGroups();
+  }, []);
+
   const handleRowClick = (record) => {
      setSelectedFamily(record);
      setIsModalOpen(true);
+     fetchHistory(record.id);
+  };
+
+  const fetchHistory = async (familyId) => {
+    setHistoryLoading(true);
+    try {
+      const { data } = await api.get(`/families/${familyId}/assistance`);
+      setHistory(data);
+    } catch (error) {
+      notification.error({
+        message: 'Erro ao carregar histórico',
+        description: error.message,
+      });
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const handleAddAssistance = async (values) => {
+    setIsSubmittingHistory(true);
+    try {
+      await api.post(`/families/${selectedFamily.id}/assistance`, values);
+      notification.success({ message: 'Histórico registrado com sucesso' });
+      form.resetFields();
+      fetchHistory(selectedFamily.id);
+    } catch (error) {
+      notification.error({
+        message: 'Erro ao registrar assistência',
+        description: error.message,
+      });
+    } finally {
+      setIsSubmittingHistory(false);
+    }
+  };
+
+  const handleBulkAssistance = async (values) => {
+    if (selectedRowKeys.length === 0) {
+      notification.warning({ message: 'Nenhuma família selecionada' });
+      return;
+    }
+    
+    setIsSubmittingBulk(true);
+    try {
+      await api.post('/families/bulk-assistance', {
+        family_ids: selectedRowKeys,
+        assistance: values
+      });
+      notification.success({ message: `Assistência registrada para ${selectedRowKeys.length} famílias.` });
+      setIsBulkModalOpen(false);
+      bulkForm.resetFields();
+      setSelectedRowKeys([]);
+    } catch (error) {
+      notification.error({
+        message: 'Erro ao registrar assistência em massa',
+        description: error.message,
+      });
+    } finally {
+      setIsSubmittingBulk(false);
+    }
+  };
+
+  const onSelectChange = (newSelectedRowKeys) => {
+    setSelectedRowKeys(newSelectedRowKeys);
+  };
+
+  const rowSelection = {
+    selectedRowKeys,
+    onChange: onSelectChange,
   };
 
   const vulnerabilityChartData = {
@@ -331,6 +422,9 @@ function Families() {
         ghost
         title="Cadastro Único de Famílias"
         buttons={[
+          <Button key="groups" type="default" onClick={() => router.push('/admin/families/groups')} style={{ marginRight: 8 }}>
+            <FeatherIcon icon="users" size={14} /> Gerenciar Grupos
+          </Button>,
           <CSVLink
             key="csv-export"
             data={families}
@@ -341,6 +435,9 @@ function Families() {
                 <FeatherIcon icon="download" size={14} /> Exportar CSV
             </Button>
           </CSVLink>,
+          <Button key="bulk-action" type="default" danger onClick={() => setIsBulkModalOpen(true)} disabled={selectedRowKeys.length === 0}>
+             <FeatherIcon icon="layers" size={14} /> Ação em Massa ({selectedRowKeys.length})
+          </Button>,
           <Button key="1" type="primary" onClick={() => router.push('/admin/families/add')}>
             <FeatherIcon icon="plus" size={14} /> Nova Família
           </Button>,
@@ -420,6 +517,7 @@ function Families() {
                 <Skeleton active />
             ) : (
                 <Table 
+                    rowSelection={rowSelection}
                     dataSource={families} 
                     columns={columns} 
                     rowKey="id" 
@@ -445,25 +543,144 @@ function Families() {
           width={800}
         >
           {selectedFamily && (
-            <Descriptions bordered column={{ xxl: 2, xl: 2, lg: 2, md: 1, sm: 1, xs: 1 }}>
-              <Descriptions.Item label="Responsável">{selectedFamily.name_responsible}</Descriptions.Item>
-              <Descriptions.Item label="CPF">{selectedFamily.cpf}</Descriptions.Item>
-              <Descriptions.Item label="NIS">{selectedFamily.nis_responsible || '-'}</Descriptions.Item>
-              <Descriptions.Item label="Telefone">{selectedFamily.phone || '-'}</Descriptions.Item>
-              <Descriptions.Item label="Endereço" span={2}>
-                {selectedFamily.address_full}, {selectedFamily.neighborhood} - {selectedFamily.city}
-              </Descriptions.Item>
-              <Descriptions.Item label="Renda Mensal">R$ {selectedFamily.monthly_income?.toFixed(2)}</Descriptions.Item>
-              <Descriptions.Item label="Dependentes">{selectedFamily.dependents_count}</Descriptions.Item>
-              <Descriptions.Item label="Renda Per Capita">R$ {selectedFamily.per_capita_income?.toFixed(2)}</Descriptions.Item>
-              <Descriptions.Item label="Vulnerabilidade">
-                <Tag color="blue">{selectedFamily.vulnerability_status}</Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="Observações" span={2}>
-                {selectedFamily.family_observations || 'Sem observações'}
-              </Descriptions.Item>
-            </Descriptions>
+            <Tabs defaultActiveKey="1">
+              <Tabs.TabPane tab="Dados Gerais" key="1">
+                <Descriptions bordered column={{ xxl: 2, xl: 2, lg: 2, md: 1, sm: 1, xs: 1 }}>
+                  <Descriptions.Item label="Responsável">{selectedFamily.name_responsible}</Descriptions.Item>
+                  <Descriptions.Item label="CPF">{selectedFamily.cpf}</Descriptions.Item>
+                  <Descriptions.Item label="NIS">{selectedFamily.nis_responsible || '-'}</Descriptions.Item>
+                  <Descriptions.Item label="Telefone">{selectedFamily.phone || '-'}</Descriptions.Item>
+                  <Descriptions.Item label="Endereço" span={2}>
+                    {selectedFamily.address_full}, {selectedFamily.neighborhood} - {selectedFamily.city}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Renda Mensal">R$ {selectedFamily.monthly_income?.toFixed(2)}</Descriptions.Item>
+                  <Descriptions.Item label="Dependentes">{selectedFamily.dependents_count}</Descriptions.Item>
+                  <Descriptions.Item label="Renda Per Capita">R$ {selectedFamily.per_capita_income?.toFixed(2)}</Descriptions.Item>
+                  <Descriptions.Item label="Vulnerabilidade">
+                    <Tag color="blue">{selectedFamily.vulnerability_status}</Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Observações" span={2}>
+                    {selectedFamily.family_observations || 'Sem observações'}
+                  </Descriptions.Item>
+                </Descriptions>
+              </Tabs.TabPane>
+              
+              <Tabs.TabPane tab="Histórico de Assistência" key="2">
+                <Cards headless title="Registrar Nova Assistência">
+                  <Form form={form} layout="vertical" onFinish={handleAddAssistance}>
+                    <Row gutter={16}>
+                      <Col span={8}>
+                        <Form.Item name="assistance_type" label="Tipo" rules={[{ required: true }]}>
+                          <Select placeholder="Selecione o tipo">
+                            <Option value="cesta_basica">Cesta Básica</Option>
+                            <Option value="evento">Evento</Option>
+                            <Option value="programa">Programa Social</Option>
+                            <Option value="curso">Curso / Capacitação</Option>
+                            <Option value="outros">Outros</Option>
+                          </Select>
+                        </Form.Item>
+                      </Col>
+                      <Col span={8}>
+                        <Form.Item name="date_provided" label="Data">
+                          <DatePicker style={{ width: '100%' }} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={8}>
+                        <Form.Item name="quantity" label="Qtd / Valor">
+                          <InputNumber style={{ width: '100%' }} min={0} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={24}>
+                        <Form.Item name="description" label="Descrição / Observações">
+                          <Input.TextArea rows={2} placeholder="Detalhes da assistência prestada..." />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    <Button type="primary" htmlType="submit" loading={isSubmittingHistory}>
+                      Registrar Histórico
+                    </Button>
+                  </Form>
+                </Cards>
+
+                <div style={{ marginTop: 20 }}>
+                  <h4 style={{ marginBottom: 15 }}>Atividades Anteriores</h4>
+                  {historyLoading ? (
+                    <Skeleton active />
+                  ) : (
+                    <List
+                      itemLayout="horizontal"
+                      dataSource={history}
+                      renderItem={(item) => (
+                        <List.Item>
+                          <List.Item.Meta
+                            title={
+                              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span>
+                                  <Tag color="purple">{item.assistance_type.replace('_', ' ').toUpperCase()}</Tag>
+                                  <strong>{new Date(item.date_provided).toLocaleDateString()}</strong>
+                                </span>
+                                <small style={{ color: '#888' }}>Por: {item.professional_name || 'Sistema'}</small>
+                              </div>
+                            }
+                            description={
+                              <div>
+                                <p style={{ margin: '5px 0' }}>{item.description}</p>
+                                {item.quantity > 1 && <Tag size="small">Qtd: {item.quantity}</Tag>}
+                              </div>
+                            }
+                          />
+                        </List.Item>
+                      )}
+                      locale={{ emptyText: 'Nenhum histórico registrado para esta família.' }}
+                    />
+                  )}
+                </div>
+              </Tabs.TabPane>
+            </Tabs>
           )}
+        </Modal>
+
+        <Modal
+          title="Registro de Assistência em Massa"
+          open={isBulkModalOpen}
+          onCancel={() => setIsBulkModalOpen(false)}
+          footer={null}
+          width={700}
+        >
+          <div style={{ marginBottom: 20 }}>
+            <Tag color="blue">Registrando para {selectedRowKeys.length} famílias selecionadas</Tag>
+          </div>
+          <Form form={bulkForm} layout="vertical" onFinish={handleBulkAssistance}>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item name="assistance_type" label="Tipo de Assistência" rules={[{ required: true }]}>
+                  <Select placeholder="Selecione o tipo">
+                    <Option value="cesta_basica">Cesta Básica</Option>
+                    <Option value="evento">Evento</Option>
+                    <Option value="programa">Programa Social</Option>
+                    <Option value="curso">Curso / Capacitação</Option>
+                    <Option value="outros">Outros</Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item name="date_provided" label="Data da Ação">
+                  <DatePicker style={{ width: '100%' }} />
+                </Form.Item>
+              </Col>
+              <Col span={24}>
+                <Form.Item name="description" label="Descrição Coletiva (Opcional)">
+                  <Input.TextArea rows={3} placeholder="Ex: Entrega de cestas de Natal para moradores do bairro X..." />
+                </Form.Item>
+              </Col>
+            </Row>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <Button onClick={() => setIsBulkModalOpen(false)}>Cancelar</Button>
+              <Button type="primary" htmlType="submit" loading={isSubmittingBulk}>
+                Confirmar Registro em Massa
+              </Button>
+            </div>
+          </Form>
         </Modal>
       </Main>
     </>

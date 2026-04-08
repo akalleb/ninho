@@ -1,5 +1,6 @@
 /* eslint-disable no-shadow */
 import React, { Component } from 'react';
+import Image from 'next/image';
 import { Layout, Button, Row, Col, Spin } from 'antd';
 import FeatherIcon from 'feather-icons-react';
 import FontAwesome from 'react-fontawesome';
@@ -209,7 +210,7 @@ const ThemeLayout = (WrappedComponent) => {
                 <Col lg={!topMenu ? 4 : 3} sm={6} xs={12} className="align-center-v navbar-brand">
                   {!topMenu || windowWidth <= 991 ? (
                     <Button type="link" onClick={toggleCollapsed}>
-                      <img src={collapsed ? iconRightUrl : iconLeftUrl} alt="menu" />
+                      <Image src={collapsed ? iconRightUrl : iconLeftUrl} alt="menu" width={16} height={16} />
                     </Button>
                   ) : null}
                   <NextLink
@@ -217,13 +218,15 @@ const ThemeLayout = (WrappedComponent) => {
                     href={logoHref}
                     activeClassName=""
                   >
-                    <img
+                    <Image
                       src={!darkMode ? logoDarkUrl : logoWhiteUrl}
                       alt="StrikingDash Logo"
+                      width={120}
+                      height={34}
                       onError={(e) => {
-                        // Fallback if image doesn't load
                         e.target.style.display = 'none';
                       }}
+                      priority={true}
                     />
                   </NextLink>
                 </Col>

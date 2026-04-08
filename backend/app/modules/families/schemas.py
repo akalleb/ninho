@@ -1,6 +1,6 @@
 from pydantic import BaseModel, computed_field, field_validator
 from datetime import date, datetime
-from typing import Optional
+from typing import Optional, List
 from ...core.security import decrypt_data
 
 class FamilyBase(BaseModel):
@@ -73,3 +73,41 @@ class FamilyResponse(FamilyBase):
 
     class Config:
         from_attributes = True
+
+class FamilyAssistanceBase(BaseModel):
+    assistance_type: str
+    description: Optional[str] = None
+    date_provided: Optional[datetime] = None
+    quantity: Optional[float] = 1.0
+    professional_id: Optional[int] = None
+
+class FamilyAssistanceCreate(FamilyAssistanceBase):
+    pass
+
+class FamilyAssistanceResponse(FamilyAssistanceBase):
+    id: int
+    family_id: str
+    created_at: datetime
+    professional_name: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class GroupBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    category: Optional[str] = None
+
+class GroupCreate(GroupBase):
+    pass
+
+class GroupResponse(GroupBase):
+    id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class BulkAssistanceRequest(BaseModel):
+    family_ids: List[str]
+    assistance: FamilyAssistanceCreate

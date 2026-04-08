@@ -41,7 +41,6 @@ function SocialProfile() {
                     className="facebook"
                     prefix={
                       <FontAwesome
-                        className="super-crazy-colors"
                         size="2x"
                         className="text-shadow"
                         name="facebook"
@@ -55,7 +54,6 @@ function SocialProfile() {
                     className="twitter"
                     prefix={
                       <FontAwesome
-                        className="super-crazy-colors"
                         size="2x"
                         className="text-shadow"
                         name="twitter"
@@ -69,7 +67,6 @@ function SocialProfile() {
                     className="dribbble"
                     prefix={
                       <FontAwesome
-                        className="super-crazy-colors"
                         size="2x"
                         className="text-shadow"
                         name="dribbble"
@@ -83,7 +80,6 @@ function SocialProfile() {
                     className="instagram"
                     prefix={
                       <FontAwesome
-                        className="super-crazy-colors"
                         size="2x"
                         className="text-shadow"
                         name="instagram"
@@ -97,7 +93,6 @@ function SocialProfile() {
                     className="github"
                     prefix={
                       <FontAwesome
-                        className="super-crazy-colors"
                         size="2x"
                         className="text-shadow"
                         name="github"
@@ -111,7 +106,6 @@ function SocialProfile() {
                     className="medium"
                     prefix={
                       <FontAwesome
-                        className="super-crazy-colors"
                         size="2x"
                         className="text-shadow"
                         name="medium"

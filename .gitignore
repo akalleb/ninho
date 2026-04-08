@@ -6,7 +6,9 @@
 
 **/__pycache__/
 **/.venv/
+**/.venv*/
 **/venv/
+**/venv*/
 **/*.py[cod]
 
 **/*.node

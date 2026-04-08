@@ -22,6 +22,7 @@ const filterSinglePage = (paramsId) => {
       const response = await api.get(`/projects/${paramsId}`);
       dispatch(singleProjectSuccess([response.data]));
     } catch (err) {
+      console.error('Erro ao buscar projeto:', err);
       dispatch(singleProjectErr(err));
     }
   };

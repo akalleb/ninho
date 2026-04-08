@@ -2,6 +2,14 @@ from pydantic import BaseModel, field_validator
 from datetime import date, datetime
 from typing import Optional, List, Dict
 
+RESOURCE_SOURCE_TYPES = {"emenda", "doacao", "convenio", "evento", "crowdfunding"}
+RESOURCE_SOURCE_STATUSES = {"active", "inactive", "in_progress"}
+WALLET_CATEGORIES = {"educacao", "saude", "assistencia_social", "infraestrutura", "livre"}
+PAYMENT_METHODS = {"transferencia", "pix", "boleto", "deposito", "cheque"}
+REVENUE_STATUSES = {"pendente", "recebido", "conciliado", "cancelado"}
+EXPENSE_STATUSES = {"pendente", "agendado", "pago", "estornado"}
+ORIGIN_SPHERES = {"federal", "estadual", "municipal", "privado"}
+
 class ResourceSourceBase(BaseModel):
     name: str
     type: str
@@ -13,6 +21,20 @@ class ResourceSourceBase(BaseModel):
     total_value_estimated: float | None = None
     status: str = "active"
     wallet_id: int | None = None
+
+    @field_validator("type")
+    @classmethod
+    def validate_type(cls, v: str) -> str:
+        if v not in RESOURCE_SOURCE_TYPES:
+            raise ValueError("type inválido")
+        return v
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, v: str) -> str:
+        if v not in RESOURCE_SOURCE_STATUSES:
+            raise ValueError("status inválido")
+        return v
 
 class ResourceSourceCreate(ResourceSourceBase):
     create_initial_revenue: bool = False
@@ -49,6 +71,23 @@ class WalletBase(BaseModel):
     auto_charge_expense_description: str | None = None
     auto_charge_expense_category_id: int | None = None
     payroll_fixed_staff: Dict[str, dict] | None = None
+
+    @field_validator("category")
+    @classmethod
+    def validate_category(cls, v: str) -> str:
+        if v not in WALLET_CATEGORIES:
+            raise ValueError("category inválida")
+        return v
+
+    @field_validator("auto_charge_mode")
+    @classmethod
+    def validate_auto_charge_mode(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        allowed = {"flat_per_attendance", "service_type", "professional"}
+        if v not in allowed:
+            raise ValueError("auto_charge_mode inválido")
+        return v
 
 class WalletCreate(WalletBase):
     initial_balance: float = 0.0
@@ -105,6 +144,13 @@ class TransferCreate(BaseModel):
     transfer_date: date | None = None
     description: str | None = None
 
+    @field_validator("amount")
+    @classmethod
+    def validate_amount(cls, v: float) -> float:
+        if v <= 0:
+            raise ValueError("amount inválido")
+        return v
+
 class ExpenseBase(BaseModel):
     amount: float
     paid_at: date | None = None
@@ -115,6 +161,13 @@ class ExpenseBase(BaseModel):
     document_ref: str | None = None
     status: str = "pago"
     source_id: int | None = None
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, v: str) -> str:
+        if v not in EXPENSE_STATUSES:
+            raise ValueError("status inválido")
+        return v
 
 class ExpenseCreate(ExpenseBase):
     pass
@@ -153,6 +206,27 @@ class RevenueBase(BaseModel):
     tracking_code: str | None = None
     observations: str | None = None
 
+    @field_validator("payment_method")
+    @classmethod
+    def validate_payment_method(cls, v: str) -> str:
+        if v not in PAYMENT_METHODS:
+            raise ValueError("payment_method inválido")
+        return v
+
+    @field_validator("origin_sphere")
+    @classmethod
+    def validate_origin_sphere(cls, v: str) -> str:
+        if v not in ORIGIN_SPHERES:
+            raise ValueError("origin_sphere inválido")
+        return v
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, v: str) -> str:
+        if v not in REVENUE_STATUSES:
+            raise ValueError("status inválido")
+        return v
+
 class RevenueCreate(RevenueBase):
     source_id: int
     wallet_id: int
@@ -170,6 +244,33 @@ class RevenueUpdate(BaseModel):
     is_reconciled: bool | None = None
     tracking_code: str | None = None
     observations: str | None = None
+
+    @field_validator("payment_method")
+    @classmethod
+    def validate_payment_method(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        if v not in PAYMENT_METHODS:
+            raise ValueError("payment_method inválido")
+        return v
+
+    @field_validator("origin_sphere")
+    @classmethod
+    def validate_origin_sphere(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        if v not in ORIGIN_SPHERES:
+            raise ValueError("origin_sphere inválido")
+        return v
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        if v not in REVENUE_STATUSES:
+            raise ValueError("status inválido")
+        return v
 
 class RevenueResponse(RevenueBase):
     id: int

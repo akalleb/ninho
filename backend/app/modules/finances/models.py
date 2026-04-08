@@ -37,6 +37,7 @@ class RevenueStatus(str, enum.Enum):
     CANCELLED = "cancelado"
 
 class ExpenseStatus(str, enum.Enum):
+    PENDING = "pendente"
     SCHEDULED = "agendado"
     PAID = "pago"
     REVERSED = "estornado"

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, Float, Boolean, Text, DateTime, ForeignKey, Enum
+from sqlalchemy import Column, Integer, String, Date, Float, Boolean, Text, DateTime, ForeignKey, Enum, Table
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum
@@ -62,3 +62,44 @@ class Family(Base):
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
+
+    assistance_history = relationship("FamilyAssistance", back_populates="family", cascade="all, delete-orphan")
+    groups = relationship("Group", secondary="family_groups", back_populates="families")
+
+# Association Table for Family-Group (Many-to-Many)
+family_groups = Table(
+    "family_groups",
+    Base.metadata,
+    Column("family_id", String, ForeignKey("families.id"), primary_key=True),
+    Column("group_id", Integer, ForeignKey("groups.id"), primary_key=True),
+)
+
+class Group(Base):
+    __tablename__ = "groups"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True, nullable=False)
+    description = Column(Text, nullable=True)
+    category = Column(String, nullable=True) # Ex: "Bairro", "Programa", "Curso"
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    families = relationship("Family", secondary="family_groups", back_populates="groups")
+
+class FamilyAssistance(Base):
+    __tablename__ = "family_assistance"
+
+    id = Column(Integer, primary_key=True, index=True)
+    family_id = Column(String, ForeignKey("families.id"), nullable=False)
+    
+    assistance_type = Column(String, nullable=False) # cesta_basica, evento, programa, curso, outros
+    description = Column(Text, nullable=True)
+    date_provided = Column(DateTime(timezone=True), server_default=func.now())
+    
+    quantity = Column(Float, nullable=True, default=1.0)
+    professional_id = Column(Integer, ForeignKey("professionals.id"), nullable=True)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    family = relationship("Family", back_populates="assistance_history")
+    professional = relationship("Professional")

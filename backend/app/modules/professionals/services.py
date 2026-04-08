@@ -93,7 +93,8 @@ class ProfessionalService:
                             detail = json.dumps(resp.json())
                         except Exception:
                             detail = resp.text or ""
-                        raise HTTPException(status_code=400, detail=f"Supabase update_user falhou ({resp.status_code}). {detail}")
+                        logger.error(f"Supabase update_user falhou ({resp.status_code}) para {target_email}: {detail}")
+                        raise HTTPException(status_code=400, detail="Não foi possível sincronizar o usuário no Supabase Auth")
 
                 user_id = _find_user_id_by_email()
                 if user_id:
@@ -116,6 +117,7 @@ class ProfessionalService:
                     message = json.dumps(create_resp.json())
                 except Exception:
                     message = create_resp.text or ""
+                logger.error(f"Supabase create_user falhou ({create_resp.status_code}) para {target_email}: {message}")
 
                 if create_resp.status_code in (400, 409, 422):
                     user_id = _find_user_id_by_email()
@@ -126,7 +128,7 @@ class ProfessionalService:
 
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Supabase create_user falhou ({create_resp.status_code}). {message}",
+                    detail="Não foi possível sincronizar o usuário no Supabase Auth",
                 )
 
             if not supabase:

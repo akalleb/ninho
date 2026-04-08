@@ -7,14 +7,15 @@ services:
       dockerfile: Dockerfile
     container_name: ninho-backend
     restart: always
-    ports:
-      - "8005:8000"
+    network_mode: "host"
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8005"]
     env_file:
       - .env
     environment:
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,backend}
       - CORS_ALLOW_ORIGINS=${CORS_ALLOW_ORIGINS:-http://localhost:3000,http://frontend:3000,http://localhost:80}
     volumes:
+      - ./backend:/code/backend
       - ./backend/media:/code/backend/media
 
   frontend:

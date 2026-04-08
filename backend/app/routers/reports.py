@@ -5,18 +5,13 @@ from typing import List, Optional
 from datetime import date, datetime, timedelta
 from .. import models, database
 from pydantic import BaseModel
+from ..core.security import get_current_admin_or_operational
 
 router = APIRouter(
     prefix="/reports",
-    tags=["reports"]
+    tags=["reports"],
+    dependencies=[Depends(get_current_admin_or_operational)],
 )
-
-def get_db():
-    db = database.SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 # --- Schemas ---
 
@@ -65,7 +60,7 @@ def get_productivity_report(
     group_by: str = Query(..., enum=["professional", "specialty", "unit"]), # unit not fully implemented in models, maybe use 'service_type' from evolution
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(database.get_db),
 ):
     query = db.query(models.Attendance)
     
@@ -92,7 +87,7 @@ def get_evolution_report(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     limit_months: int = Query(6, ge=1, le=24),
-    db: Session = Depends(get_db)
+    db: Session = Depends(database.get_db),
 ):
     if not start_date:
         today = date.today()
@@ -143,7 +138,7 @@ def get_evolution_report(
 def get_performance_matrix(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(database.get_db),
 ):
     query = db.query(
         func.count(case((models.Attendance.status == 'agendado', 1))),
@@ -170,7 +165,7 @@ def get_performance_matrix(
 def get_demographics(
     type: str = Query(..., enum=["diagnosis", "severity", "age"]),
     max_rows: int = Query(10000, ge=100, le=100000),
-    db: Session = Depends(get_db)
+    db: Session = Depends(database.get_db),
 ):
     if type == "diagnosis":
         results = db.query(models.Child.diagnosis, func.count(models.Child.id))\
@@ -202,7 +197,7 @@ def get_demographics(
         return [{"category": k, "count": v} for k, v in age_groups.items()]
 
 @router.get("/bi/heatmap", response_model=List[HeatmapPoint])
-def get_heatmap(db: Session = Depends(get_db)):
+def get_heatmap(db: Session = Depends(database.get_db)):
     # Join Family to get location
     results = db.query(
         models.Family.neighborhood, 
@@ -224,7 +219,7 @@ def get_heatmap(db: Session = Depends(get_db)):
     ]
 
 @router.get("/bi/financial", response_model=List[FinancialReport])
-def get_financial_report(db: Session = Depends(get_db)):
+def get_financial_report(db: Session = Depends(database.get_db)):
     # Summary by Wallet
     wallets = db.query(models.Wallet).all()
     report = []
@@ -251,7 +246,7 @@ def get_financial_report(db: Session = Depends(get_db)):
 # --- SUS Export & Validation ---
 
 @router.get("/validate/sus", response_model=List[SUSValidationIssue])
-def validate_sus_data(db: Session = Depends(get_db)):
+def validate_sus_data(db: Session = Depends(database.get_db)):
     issues = []
     
     # Check Professionals
@@ -280,7 +275,7 @@ def export_bpa(
     type: str = Query(..., enum=["BPA-I", "BPA-C"]),
     month: int = Query(..., ge=1, le=12),
     year: int = Query(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(database.get_db),
 ):
     # This is a simplified Mock generator for BPA
     # In a real scenario, this requires following the official SUS layout (hundreds of chars fixed width)

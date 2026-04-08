@@ -6,9 +6,10 @@ from pydantic import BaseModel, field_validator
 from sqlalchemy.orm import Session
 
 from .. import database, models
+from ..core.security import get_current_admin_or_operational
 
 
-router = APIRouter(prefix="/inventory", tags=["Inventory"])
+router = APIRouter(prefix="/inventory", tags=["Inventory"], dependencies=[Depends(get_current_admin_or_operational)])
 
 
 class InventoryItemBase(BaseModel):

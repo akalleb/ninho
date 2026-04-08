@@ -16,6 +16,7 @@ import { Button } from '../../components/buttons/buttons';
 import { filterSinglePage, deleteProject } from '../../redux/project/actionCreator';
 import { getImageUrl } from '../../utility/getImageUrl';
 import api from '../../config/api/axios';
+import normalizeApiError from '../../utils/errors/normalizeApiError';
 
 // Direct imports - no lazy loading needed since route already uses dynamic()
 import TaskList from './overview/TaskList';
@@ -27,7 +28,7 @@ function ProjectDetails() {
   const dispatch = useDispatch();
   const router = useRouter();
   const { notification } = App.useApp();
-  const projectState = useSelector((state) => state.project);
+  const projectState = useSelector((state) => state.project) || {};
 
   // Get project ID from params
   // Route structure: /admin/project/projectDetails/1
@@ -52,16 +53,12 @@ function ProjectDetails() {
     }
   }, [projectId, dispatch]);
 
-  const project = projectState?.data;
+  const project = Array.isArray(projectState?.data) ? projectState.data : [];
+  const isProjectLoading = Boolean(projectState?.loading);
+  const projectError = projectState?.error;
 
   // Safety check: don't render until project data is loaded
-  if (
-    projectState.loading ||
-    !project ||
-    !Array.isArray(project) ||
-    project.length === 0 ||
-    !project[0]
-  ) {
+  if (isProjectLoading) {
     return (
       <ProjectDetailsWrapper>
         <PageHeader ghost title="Detalhes do projeto" />
@@ -74,13 +71,46 @@ function ProjectDetails() {
     );
   }
 
+  if (projectError) {
+    return (
+      <ProjectDetailsWrapper>
+        <PageHeader ghost title="Detalhes do projeto" />
+        <Main>
+          <Cards headless>
+            <div style={{ padding: 20, textAlign: 'center' }}>
+              <FeatherIcon icon="alert-circle" size={48} color="#ff4d4f" />
+              <h3>Erro ao carregar projeto</h3>
+              <p>Não foi possível carregar os detalhes do projeto. Verifique se o ID é válido.</p>
+            </div>
+          </Cards>
+        </Main>
+      </ProjectDetailsWrapper>
+    );
+  }
+
+  if (project.length === 0 || !project[0]) {
+    return (
+      <ProjectDetailsWrapper>
+        <PageHeader ghost title="Detalhes do projeto" />
+        <Main>
+          <Cards headless>
+            <div style={{ padding: 20, textAlign: 'center' }}>
+              <FeatherIcon icon="inbox" size={48} />
+              <h3>Projeto não encontrado</h3>
+              <p>O projeto solicitado não existe ou foi removido.</p>
+            </div>
+          </Cards>
+        </Main>
+      </ProjectDetailsWrapper>
+    );
+  }
+
   const current = project[0] || {};
 
   const {
     title = '',
     content = '',
     description = '',
-    status,
     progress,
     total_tasks,
     completed_tasks,
@@ -134,14 +164,7 @@ function ProjectDetails() {
       router.push('/admin/project/view/grid');
     } catch (error) {
       const status = error?.response?.status;
-      let description = error?.response?.data?.detail || error.message || 'Erro desconhecido';
-      if (error?.response?.data?.detail && typeof error.response.data.detail !== 'string') {
-        try {
-          description = JSON.stringify(error.response.data.detail);
-        } catch {
-          description = 'Erro ao excluir projeto (detalhes indisponíveis)';
-        }
-      }
+      let description = normalizeApiError(error, 'Erro ao excluir projeto (detalhes indisponíveis)');
       if (status === 405) {
         description = 'A API ainda não permite excluir projetos. Esta funcionalidade será implementada no backend.';
       }

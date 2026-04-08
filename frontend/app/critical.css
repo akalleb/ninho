@@ -12,3 +12,39 @@ html.loaded {
   opacity: 1;
   transition: opacity 0.1s;
 }
+
+.auth-side-content {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.auth-side-content .topShape {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 400px;
+  max-width: 65%;
+  height: auto;
+}
+
+.auth-side-content .bottomShape {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 420px;
+  max-width: 70%;
+  height: auto;
+}
+
+.auth-side-content .w-150px {
+  width: 150px !important;
+  height: auto !important;
+}
+
+.auth-side-content .auth-content-figure {
+  display: block;
+  width: 520px;
+  max-width: 100%;
+  height: auto;
+}

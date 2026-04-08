@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 from typing import List, Optional
 import json
+from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException
 
 from .models import Project, ProjectTask, ProjectStatus, ProjectTaskStatus
@@ -128,10 +129,20 @@ class ProjectService:
         return project
 
     @staticmethod
-    def delete_project(db: Session, project_id: int):
+    def delete_project(db: Session, project_id: int, force: bool = False):
         project = ProjectService.get_project(db, project_id)
-        db.delete(project)
-        db.commit()
+        try:
+            if force:
+                # Delete all associated tasks
+                db.query(ProjectTask).filter(ProjectTask.project_id == project_id).delete()
+            db.delete(project)
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            raise HTTPException(
+                status_code=400,
+                detail="Não é possível excluir este projeto pois existem tarefas ou registros dependentes vinculados. Use a exclusão forçada para remover tudo."
+            )
 
     @staticmethod
     def create_task(db: Session, project_id: int, task: ProjectTaskCreate) -> ProjectTask:

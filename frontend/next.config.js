@@ -10,7 +10,7 @@ const nextConfig = {
   },
   // Use basePath if set, otherwise empty (works at root)
   basePath: basePath,
-  assetPrefix: basePath,
+  assetPrefix: process.env.NODE_ENV === 'production' ? basePath : '',
   images: {
     unoptimized: true,
   },
@@ -117,9 +117,9 @@ const nextConfig = {
     // Optimize chunk splitting for faster builds (both dev and production)
     config.optimization = {
       ...config.optimization,
-      moduleIds: dev ? 'named' : 'deterministic',
-      chunkIds: dev ? 'named' : 'deterministic',
-      ...(dev ? {} : { runtimeChunk: 'single' }),
+      moduleIds: 'deterministic',
+      chunkIds: 'deterministic',
+      runtimeChunk: 'single',
       splitChunks: {
         chunks: 'all',
         maxInitialRequests: 25,
@@ -170,24 +170,20 @@ const nextConfig = {
             reuseExistingChunk: true,
             minChunks: 2,
           },
-          // Common chunk for shared code (only in production)
-          ...(dev ? {} : {
-            common: {
-              name: 'common',
-              minChunks: 2,
-              chunks: 'async',
-              priority: 10,
-              reuseExistingChunk: true,
-            },
-          }),
+          // Common chunk for shared code
+          common: {
+            name: 'common',
+            minChunks: 2,
+            chunks: 'async',
+            priority: 10,
+            reuseExistingChunk: true,
+          },
         },
       },
       // Reduce optimization passes for faster builds
-      ...(dev ? {} : {
-        removeAvailableModules: true,
-        removeEmptyChunks: true,
-        mergeDuplicateChunks: true,
-      }),
+      removeAvailableModules: true,
+      removeEmptyChunks: true,
+      mergeDuplicateChunks: true,
     };
 
     return config;

@@ -4,23 +4,16 @@ import json
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from .. import database, models
 from ..modules.children.schemas import ChildResponse as Child, EvolutionResponse as Evolution, EvolutionCreate
+from ..core.security import get_current_user
 
 
-router = APIRouter(tags=["Attendances"])
-
-
-def get_db():
-    db = database.SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+router = APIRouter(tags=["Attendances"], dependencies=[Depends(get_current_user)])
 
 
 def apply_auto_charge_for_attendance(db: Session, attendance: models.Attendance) -> None:
@@ -166,10 +159,28 @@ class Attendance(AttendanceBase):
 class AttendanceUpdate(AttendanceBase):
     status: str | None = None
 
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, v: str | None):
+        if v is None:
+            return v
+        allowed = {"agendado", "em_espera", "em_atendimento", "finalizado", "falta"}
+        if v not in allowed:
+            raise ValueError("status inválido")
+        return v
+
 
 class AttendanceUpdateStatus(BaseModel):
     status: str
     notes: str | None = None
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, v: str):
+        allowed = {"agendado", "em_espera", "em_atendimento", "finalizado", "falta"}
+        if v not in allowed:
+            raise ValueError("status inválido")
+        return v
 
 
 @router.get("/attendances/", response_model=List[Attendance])
@@ -179,9 +190,12 @@ def list_attendances(
     end_date: Optional[date] = None,
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db),
+    db: Session = Depends(database.get_db),
+    current_user: models.Professional = Depends(get_current_user),
 ):
     query = db.query(models.Attendance)
+    if current_user.role == "health":
+        query = query.filter(models.Attendance.professional_id == current_user.id)
 
     if status:
         query = query.filter(models.Attendance.status == status)
@@ -194,7 +208,15 @@ def list_attendances(
 
 
 @router.post("/attendances/", response_model=Attendance)
-def create_attendance(attendance: AttendanceCreate, db: Session = Depends(get_db)):
+def create_attendance(
+    attendance: AttendanceCreate,
+    db: Session = Depends(database.get_db),
+    current_user: models.Professional = Depends(get_current_user),
+):
+    if current_user.role == "health":
+        if attendance.professional_id and attendance.professional_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Acesso não autorizado")
+
     status = "agendado" if attendance.scheduled_time else "em_espera"
     check_in = func.now() if status == "em_espera" else None
 
@@ -218,13 +240,26 @@ def read_queue(
     professional_id: Optional[int] = None,
     date_filter: Optional[date] = None,
     status: Optional[str] = None,
-    db: Session = Depends(get_db),
+    db: Session = Depends(database.get_db),
+    current_user: models.Professional = Depends(get_current_user),
 ):
+    if current_user.role == "health":
+        if professional_id and professional_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Acesso não autorizado")
+        query_filter = or_(
+            models.Attendance.professional_id == None,
+            models.Attendance.professional_id == current_user.id,
+        )
+    else:
+        query_filter = None
+
     query = db.query(models.Attendance).options(
         joinedload(models.Attendance.child),
         joinedload(models.Attendance.professional),
         joinedload(models.Attendance.wallet),
     )
+    if query_filter is not None:
+        query = query.filter(query_filter)
 
     if status:
         query = query.filter(models.Attendance.status == status)
@@ -265,7 +300,13 @@ def read_queue(
 
 
 @router.get("/attendances/my-day", response_model=List[Attendance])
-def get_professional_daily_list(professional_id: int, db: Session = Depends(get_db)):
+def get_professional_daily_list(
+    professional_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.Professional = Depends(get_current_user),
+):
+    if current_user.role == "health" and professional_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Acesso não autorizado")
     today = date.today()
     effective_date = func.date(
         func.coalesce(
@@ -296,11 +337,14 @@ def get_professional_daily_list(professional_id: int, db: Session = Depends(get_
 def update_attendance_status(
     attendance_id: int,
     status_update: AttendanceUpdateStatus,
-    db: Session = Depends(get_db),
+    db: Session = Depends(database.get_db),
+    current_user: models.Professional = Depends(get_current_user),
 ):
     attendance = db.query(models.Attendance).filter(models.Attendance.id == attendance_id).first()
     if not attendance:
         raise HTTPException(status_code=404, detail="Attendance not found")
+    if current_user.role == "health" and attendance.professional_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Acesso não autorizado")
 
     new_status = status_update.status
     attendance.status = new_status
@@ -321,18 +365,35 @@ def update_attendance_status(
 
 
 @router.get("/attendances/{attendance_id}", response_model=Attendance)
-def read_attendance(attendance_id: int, db: Session = Depends(get_db)):
+def read_attendance(
+    attendance_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.Professional = Depends(get_current_user),
+):
     attendance = db.query(models.Attendance).filter(models.Attendance.id == attendance_id).first()
     if not attendance:
         raise HTTPException(status_code=404, detail="Attendance not found")
+    if current_user.role == "health":
+        if attendance.professional_id != current_user.id:
+            if not (attendance.professional_id is None and attendance.status == "em_espera"):
+                raise HTTPException(status_code=403, detail="Acesso não autorizado")
     return attendance
 
 
 @router.put("/attendances/{attendance_id}/start", response_model=Attendance)
-def start_attendance(attendance_id: int, professional_id: int, db: Session = Depends(get_db)):
+def start_attendance(
+    attendance_id: int,
+    professional_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.Professional = Depends(get_current_user),
+):
     attendance = db.query(models.Attendance).filter(models.Attendance.id == attendance_id).first()
     if not attendance:
         raise HTTPException(status_code=404, detail="Attendance not found")
+    if current_user.role == "health" and professional_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Acesso não autorizado")
+    if current_user.role == "health" and attendance.professional_id not in (None, current_user.id):
+        raise HTTPException(status_code=403, detail="Acesso não autorizado")
 
     attendance.status = "em_atendimento"
     attendance.professional_id = professional_id
@@ -343,10 +404,17 @@ def start_attendance(attendance_id: int, professional_id: int, db: Session = Dep
 
 
 @router.put("/attendances/{attendance_id}/finish", response_model=Attendance)
-def finish_attendance(attendance_id: int, notes: str, db: Session = Depends(get_db)):
+def finish_attendance(
+    attendance_id: int,
+    notes: str,
+    db: Session = Depends(database.get_db),
+    current_user: models.Professional = Depends(get_current_user),
+):
     attendance = db.query(models.Attendance).filter(models.Attendance.id == attendance_id).first()
     if not attendance:
         raise HTTPException(status_code=404, detail="Attendance not found")
+    if current_user.role == "health" and attendance.professional_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Acesso não autorizado")
 
     if attendance.status != "em_atendimento":
         raise HTTPException(status_code=400, detail="Apenas atendimentos 'Em Atendimento' podem ser finalizados.")
@@ -361,10 +429,17 @@ def finish_attendance(attendance_id: int, notes: str, db: Session = Depends(get_
 
 
 @router.put("/attendances/{attendance_id}", response_model=Attendance)
-def update_attendance(attendance_id: int, update: AttendanceUpdate, db: Session = Depends(get_db)):
+def update_attendance(
+    attendance_id: int,
+    update: AttendanceUpdate,
+    db: Session = Depends(database.get_db),
+    current_user: models.Professional = Depends(get_current_user),
+):
     attendance = db.query(models.Attendance).filter(models.Attendance.id == attendance_id).first()
     if not attendance:
         raise HTTPException(status_code=404, detail="Attendance not found")
+    if current_user.role == "health" and attendance.professional_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Acesso não autorizado")
 
     update_data = update.model_dump(exclude_unset=True)
     for key, value in update_data.items():
@@ -376,10 +451,16 @@ def update_attendance(attendance_id: int, update: AttendanceUpdate, db: Session 
 
 
 @router.delete("/attendances/{attendance_id}", status_code=204)
-def delete_attendance(attendance_id: int, db: Session = Depends(get_db)):
+def delete_attendance(
+    attendance_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: models.Professional = Depends(get_current_user),
+):
     attendance = db.query(models.Attendance).filter(models.Attendance.id == attendance_id).first()
     if not attendance:
         raise HTTPException(status_code=404, detail="Attendance not found")
+    if current_user.role == "health":
+        raise HTTPException(status_code=403, detail="Acesso não autorizado")
 
     try:
         db.delete(attendance)
@@ -397,7 +478,7 @@ def delete_attendance(attendance_id: int, db: Session = Depends(get_db)):
 def patch_attendance_status(
     attendance_id: int,
     status_update: AttendanceUpdateStatus,
-    db: Session = Depends(get_db),
+    db: Session = Depends(database.get_db),
 ):
     return update_attendance_status(attendance_id, status_update, db)
 
@@ -406,11 +487,14 @@ def patch_attendance_status(
 def create_attendance_evolution(
     attendance_id: int,
     evolution: EvolutionCreate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(database.get_db),
+    current_user: models.Professional = Depends(get_current_user),
 ):
     attendance = db.query(models.Attendance).filter(models.Attendance.id == attendance_id).first()
     if not attendance:
         raise HTTPException(status_code=404, detail="Attendance not found")
+    if current_user.role == "health" and attendance.professional_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Acesso não autorizado")
 
     if evolution.attendance_id and evolution.attendance_id != attendance_id:
         raise HTTPException(status_code=400, detail="Attendance ID mismatch")

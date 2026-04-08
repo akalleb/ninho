@@ -102,7 +102,10 @@ class ChildService:
     # Medications
     @staticmethod
     def add_medication(db: Session, child_id: int, med: ChildMedicationCreate):
-        db_med = ChildMedication(**med.model_dump())
+        ChildService.get_by_id(db, child_id)
+        payload = med.model_dump()
+        payload["child_id"] = child_id
+        db_med = ChildMedication(**payload)
         db.add(db_med)
         db.commit()
         db.refresh(db_med)
@@ -139,6 +142,7 @@ class ChildService:
     # Evolutions
     @staticmethod
     def add_evolution(db: Session, child_id: int, evo: EvolutionCreate):
+        ChildService.get_by_id(db, child_id)
         if evo.attendance_id:
             attendance = db.query(Attendance).filter(Attendance.id == evo.attendance_id).first()
             if not attendance:
@@ -149,7 +153,9 @@ class ChildService:
                     detail="Evolução só pode ser registrada em atendimentos 'Em Atendimento'",
                 )
 
-        db_evo = MultidisciplinaryEvolution(**evo.model_dump())
+        payload = evo.model_dump()
+        payload["child_id"] = child_id
+        db_evo = MultidisciplinaryEvolution(**payload)
         db.add(db_evo)
         db.commit()
         db.refresh(db_evo)

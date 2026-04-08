@@ -2,46 +2,33 @@
 
 ## 1. Como Testar Localmente (Pelo Terminal / Sem Docker)
 
-**Passo 1.1:** Verifique o seu arquivo `.env` na raiz do projeto.
-Para testes no seu computador, as variáveis de URL devem estar apontando para o seu `localhost`:
-- `NEXT_PUBLIC_API_URL=http://localhost:8000`
-- `CORS_ALLOW_ORIGINS=http://localhost:3000,http://frontend:3000`
+**Passo 1.1:** Use somente o `.env` da raiz do projeto.
+- Arquivo usado: `/media/kalleb/1TB1/python/ninho/.env`
+- Não use `.env.local` no frontend para teste local.
+- Para o cenário atual local, mantenha:
+  - `NEXT_PUBLIC_API_URL=http://127.0.0.1:8021`
+  - `CORS_ALLOW_ORIGINS=http://localhost:3000,http://127.0.0.1:3000`
 
-**Passo 1.2:** Iniciar o Backend (FastAPI)
-Abra um terminal na raiz do projeto (`f:\python\ninho`) e execute os seguintes comandos:
+**Passo 1.2:** Iniciar o Backend (FastAPI, porta 8021)
+Abra um terminal na raiz do projeto e execute:
 ```bash
-cd backend
-# Crie e ative um ambiente virtual (Recomendado)
-python -m venv venv
-# No Windows:
-venv\Scripts\activate
-# No Linux/Mac:
-# source venv/bin/activate
-
-# Instale as dependências
-pip install -r requirements.txt
-
-# Inicie o servidor do backend
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+PYTHONPATH=backend .venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8021
 ```
 
-**Passo 1.3:** Iniciar o Frontend (Next.js)
-Abra **outro** terminal na raiz do projeto (mantenha o backend rodando) e execute:
+**Passo 1.3:** Iniciar o Frontend (Next.js, porta 3000)
+Abra **outro** terminal e execute:
 ```bash
 cd frontend
-# Instale as dependências do Node
 npm install
-
-# Inicie o servidor de desenvolvimento
-npm run dev
+npm run dev -- -p 3000
 ```
 
 **Passo 1.4:** Teste a aplicação.
 - **Frontend:** Abra no navegador `http://localhost:3000`
-- **Backend (Documentação API):** Abra `http://localhost:8000/docs`
+- **Backend (Documentação API):** Abra `http://127.0.0.1:8021/docs`
 
 **Passo 1.5:** Parando a aplicação.
-Quando terminar de testar, vá em cada um dos terminais (do frontend e do backend) e pressione `Ctrl+C` para encerrar os processos.
+Quando terminar de testar, pressione `Ctrl+C` nos dois terminais (backend e frontend).
 
 ---
 

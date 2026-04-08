@@ -11,6 +11,19 @@ import api from '../../../../config/api/axios';
 import { NextNavLink } from '../../../../components/utilities/NextLink';
 import Cookies from 'js-cookie';
 
+const resolveSafeCallbackUrl = (rawCallbackUrl) => {
+  if (!rawCallbackUrl || typeof rawCallbackUrl !== 'string') return '/admin/dashboard';
+  if (!rawCallbackUrl.startsWith('/')) return '/admin/dashboard';
+  if (
+    rawCallbackUrl.startsWith('/@vite') ||
+    rawCallbackUrl.startsWith('/_next') ||
+    rawCallbackUrl.startsWith('/api/')
+  ) {
+    return '/admin/dashboard';
+  }
+  return rawCallbackUrl;
+};
+
 function SignIn() {
   const dispatch = useDispatch();
   const router = useRouter();
@@ -30,7 +43,7 @@ function SignIn() {
   useEffect(() => {
     if (!authUser) return;
     if (authUser.role === 'health') return;
-    const callbackUrl = searchParams.get('callbackUrl') || '/admin/dashboard';
+    const callbackUrl = resolveSafeCallbackUrl(searchParams.get('callbackUrl'));
     router.push(callbackUrl);
   }, [isLoggedIn, authUser, router, searchParams]);
 

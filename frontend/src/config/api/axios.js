@@ -1,8 +1,12 @@
 import axios from 'axios';
 import { supabase } from '../supabase';
 
+const backendBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8021';
+const clientBaseUrl = '/api/proxy';
+const serverBaseUrl = process.env.INTERNAL_API_URL || backendBaseUrl;
+
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
+  baseURL: typeof window === 'undefined' ? serverBaseUrl : clientBaseUrl,
   headers: {
     'Content-Type': 'application/json',
   },

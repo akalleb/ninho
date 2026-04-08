@@ -1,4 +1,5 @@
 import uuid
+from typing import List
 import re
 import os
 import time
@@ -7,10 +8,12 @@ from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, UploadFile
 from ...core.security import encrypt_data, get_data_hash
 from ...core.config import MEDIA_ROOT
-from .models import Family
-from ..children.models import Child, ChildMedication, MultidisciplinaryEvolution
+from ..children.models import Child, ChildMedication, MultidisciplinaryEvolution, HealthReferral
 from ...models import Attendance # From main models as it's not moved yet
-from .schemas import FamilyCreate, FamilyUpdate
+from ..finances.models import Expense
+from .models import Family, FamilyAssistance, Group, family_groups
+from .schemas import FamilyCreate, FamilyUpdate, FamilyAssistanceCreate, GroupCreate, BulkAssistanceRequest
+from ..professionals.models import Professional
 
 class FamilyService:
     @staticmethod
@@ -133,12 +136,30 @@ class FamilyService:
                 children = db.query(Child).filter(Child.family_id == family_id).all()
 
                 for child in children:
+                    # 1. Delete medications
                     db.query(ChildMedication).filter(ChildMedication.child_id == child.id).delete()
+                    
+                    # 2. Delete referrals
+                    db.query(HealthReferral).filter(HealthReferral.child_id == child.id).delete()
+                    
+                    # 3. Delete evolutions linked to this child
                     db.query(MultidisciplinaryEvolution).filter(
                         MultidisciplinaryEvolution.child_id == child.id
                     ).delete()
+                    
+                    # 4. Delete expenses linked to this child's attendances
+                    child_attendance_ids = [a.id for a in db.query(Attendance.id).filter(Attendance.child_id == child.id).all()]
+                    if child_attendance_ids:
+                        db.query(Expense).filter(Expense.attendance_id.in_(child_attendance_ids)).delete(synchronize_session=False)
+
+                    # 5. Delete attendances
                     db.query(Attendance).filter(Attendance.child_id == child.id).delete()
+                    
+                    # 6. Delete the child
                     db.delete(child)
+
+                # 7. Delete assistance history
+                db.query(FamilyAssistance).filter(FamilyAssistance.family_id == family_id).delete()
 
                 db.delete(db_family)
                 db.commit()
@@ -152,6 +173,55 @@ class FamilyService:
                 status_code=400,
                 detail="Não é possível excluir esta família pois existem registros dependentes. Use a exclusão forçada para remover tudo.",
             )
+    
+    @staticmethod
+    def create_assistance(db: Session, family_id: str, assistance: FamilyAssistanceCreate) -> FamilyAssistance:
+        FamilyService.get_by_id(db, family_id) # Ensure family exists
+        
+        db_assistance = FamilyAssistance(
+            family_id=family_id,
+            **assistance.model_dump()
+        )
+        db.add(db_assistance)
+        db.commit()
+        db.refresh(db_assistance)
+        return db_assistance
+
+    @staticmethod
+    def get_family_history(db: Session, family_id: str):
+        # Join with Professional to get the name
+        results = db.query(
+            FamilyAssistance,
+            Professional.name.label("professional_name")
+        ).outerjoin(
+            Professional, FamilyAssistance.professional_id == Professional.id
+        ).filter(
+            FamilyAssistance.family_id == family_id
+        ).order_by(
+            FamilyAssistance.date_provided.desc()
+        ).all()
+
+        history = []
+        for assistance, prof_name in results:
+            # Add virtual field for pydantic response
+            assistance.professional_name = prof_name
+            history.append(assistance)
+        
+        return history
+    
+    @staticmethod
+    def bulk_add_assistance(db: Session, request: BulkAssistanceRequest):
+        new_records = []
+        for family_id in request.family_ids:
+            db_assistance = FamilyAssistance(
+                family_id=family_id,
+                **request.assistance.model_dump()
+            )
+            db.add(db_assistance)
+            new_records.append(db_assistance)
+        
+        db.commit()
+        return {"count": len(new_records)}
     
     @staticmethod
     async def upload_doc(db: Session, family_id: str, doc_type: str, file: UploadFile):
@@ -180,3 +250,51 @@ class FamilyService:
 
         db.commit()
         return {"url": public_url, "type": doc_type}
+
+class GroupService:
+    @staticmethod
+    def create_group(db: Session, group_in: GroupCreate) -> Group:
+        db_group = Group(**group_in.model_dump())
+        db.add(db_group)
+        db.commit()
+        db.refresh(db_group)
+        return db_group
+
+    @staticmethod
+    def list_groups(db: Session) -> List[Group]:
+        return db.query(Group).all()
+
+    @staticmethod
+    def get_group(db: Session, group_id: int) -> Group:
+        group = db.query(Group).filter(Group.id == group_id).first()
+        if not group:
+            raise HTTPException(status_code=404, detail="Grupo não encontrado")
+        return group
+
+    @staticmethod
+    def add_family_to_group(db: Session, group_id: int, family_id: str):
+        group = GroupService.get_group(db, group_id)
+        family = FamilyService.get_by_id(db, family_id)
+        
+        # Check if already in group
+        exists = db.query(family_groups).filter_by(family_id=family_id, group_id=group_id).first()
+        if not exists:
+            stmt = family_groups.insert().values(family_id=family_id, group_id=group_id)
+            db.execute(stmt)
+            db.commit()
+        return {"message": "Família adicionada ao grupo com sucesso"}
+
+    @staticmethod
+    def remove_family_from_group(db: Session, group_id: int, family_id: str):
+        stmt = family_groups.delete().where(
+            family_groups.c.family_id == family_id,
+            family_groups.c.group_id == group_id
+        )
+        db.execute(stmt)
+        db.commit()
+        return {"message": "Família removida do grupo com sucesso"}
+
+    @staticmethod
+    def get_group_families(db: Session, group_id: int) -> List[Family]:
+        group = GroupService.get_group(db, group_id)
+        return group.families

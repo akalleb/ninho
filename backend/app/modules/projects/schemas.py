@@ -1,7 +1,7 @@
 from pydantic import BaseModel, field_validator
 from typing import List, Optional
 from datetime import date, datetime
-from .models import ProjectStatus
+from .models import ProjectStatus, ProjectTaskStatus
 
 class ProjectParticipant(BaseModel):
     name: str
@@ -22,6 +22,16 @@ class ProjectBase(BaseModel):
     end_date: Optional[date] = None
     owner: Optional[str] = None
     participants: Optional[List[ProjectParticipant]] = None
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        allowed = {s.value for s in ProjectStatus}
+        if v not in allowed:
+            raise ValueError("status inválido")
+        return v
 
     @field_validator("progress")
     @classmethod
@@ -53,6 +63,16 @@ class ProjectUpdate(BaseModel):
     owner: Optional[str] = None
     participants: Optional[List[ProjectParticipant]] = None
 
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        allowed = {s.value for s in ProjectStatus}
+        if v not in allowed:
+            raise ValueError("status inválido")
+        return v
+
     @field_validator("progress")
     @classmethod
     def validate_progress(cls, v: Optional[int]) -> Optional[int]:
@@ -76,6 +96,16 @@ class ProjectTaskBase(BaseModel):
     description: Optional[str] = None
     status: Optional[str] = None
     due_date: Optional[date] = None
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        allowed = {s.value for s in ProjectTaskStatus}
+        if v not in allowed:
+            raise ValueError("status inválido")
+        return v
 
 class ProjectTaskCreate(ProjectTaskBase):
     pass

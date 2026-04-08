@@ -319,9 +319,9 @@ class FinanceService:
                 "new_target_balance": target_wallet.balance,
             }
 
-        except Exception as e:
+        except Exception:
             db.rollback()
-            raise HTTPException(status_code=500, detail=f"Erro na transferência: {str(e)}")
+            raise HTTPException(status_code=500, detail="Erro na transferência")
             
     @staticmethod
     def export_wallet_data(db: Session, wallet_id: int):

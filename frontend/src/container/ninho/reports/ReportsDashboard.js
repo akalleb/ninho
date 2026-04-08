@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Row, Col, Tabs, Card, Button } from 'antd';
 import { PageHeader } from '../../../components/page-headers/page-headers';
 import { Main } from '../../styled';
@@ -7,8 +8,12 @@ import BiCharts from './BiCharts';
 import PerformanceMatrix from './PerformanceMatrix';
 import Demographics from './Demographics';
 import FinancialReport from './FinancialReport';
-import SusExport from './SusExport';
 import Filters from './Filters';
+
+const SusExport = dynamic(() => import('./SusExport'), {
+  ssr: false,
+  loading: () => null,
+});
 
 function ReportsDashboard() {
   const [activeTab, setActiveTab] = useState('clinical');

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, 
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from ...database import get_db
-from ...core.security import get_current_user, get_current_admin
+from ...core.security import get_current_user, get_current_admin, get_current_admin_or_operational
 from . import schemas, models
 from .services import ProfessionalService
 from ...modules.auth.schemas import PasswordChangeRequest
@@ -163,6 +163,9 @@ def get_professional_dashboard(
     db: Session = Depends(get_db),
     current_user: models.Professional = Depends(get_current_user)
 ):
+    if current_user.id != professional_id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Acesso não autorizado")
+
     from ...models import Attendance
 
     today = date.today()
@@ -251,7 +254,8 @@ def get_professional_dashboard(
 def get_production_report(
     start_date: Optional[date] = None, 
     end_date: Optional[date] = None, 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: models.Professional = Depends(get_current_admin_or_operational),
 ):
     from ...models import Attendance
     

@@ -4,6 +4,7 @@
 // This patches fetch/XMLHttpRequest to include base path for NextAuth API calls
 import '../src/utils/nextAuthPatch';
 import '../src/config/chart';
+import '../src/config/dayjs';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Provider, useDispatch } from 'react-redux';

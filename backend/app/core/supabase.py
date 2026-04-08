@@ -1,5 +1,8 @@
 from supabase import create_client, Client
 from .config import SUPABASE_URL, SUPABASE_KEY, SUPABASE_SERVICE_ROLE_KEY
+import logging
+
+logger = logging.getLogger("ninho_api")
 
 # Initialize Supabase client
 # Note: In a real production environment, you might want to handle initialization errors
@@ -10,7 +13,7 @@ try:
     else:
         supabase = None
 except Exception as e:
-    print(f"Error initializing Supabase client: {e}")
+    logger.exception("Erro ao inicializar client do Supabase")
     supabase = None
 
 try:
@@ -19,7 +22,7 @@ try:
     else:
         supabase_admin = None
 except Exception as e:
-    print(f"Error initializing Supabase admin client: {e}")
+    logger.exception("Erro ao inicializar client admin do Supabase")
     supabase_admin = None
 
 def verify_supabase_token(token: str):
@@ -28,7 +31,6 @@ def verify_supabase_token(token: str):
     Returns the user object if valid, None otherwise.
     """
     if not supabase:
-        print("Supabase client not initialized")
         return None
         
     try:
@@ -36,5 +38,5 @@ def verify_supabase_token(token: str):
         response = supabase.auth.get_user(token)
         return response.user
     except Exception as e:
-        print(f"Token verification failed: {e}")
+        logger.info("Falha ao verificar token do Supabase")
         return None

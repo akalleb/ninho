@@ -2,9 +2,13 @@
 Application Configuration
 """
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+_repo_root = Path(__file__).resolve().parents[3]
+_env_path = _repo_root / ".env"
+if _env_path.exists():
+    load_dotenv(_env_path)
 
 # Database
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./sql_app.db")

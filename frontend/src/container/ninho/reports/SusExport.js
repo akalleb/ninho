@@ -6,10 +6,18 @@ import { FileTextOutlined, FileExcelOutlined, WarningOutlined } from '@ant-desig
 import { useRouter } from 'next/navigation';
 import moment from 'moment';
 import api from '../../../config/api/axios';
-import fileSaver from 'file-saver';
-import * as XLSX from 'xlsx';
 
 const { Option } = Select;
+let saveAsFn;
+
+async function getSaveAs() {
+    if (saveAsFn) {
+        return saveAsFn;
+    }
+    const fileSaverModule = await import('file-saver');
+    saveAsFn = fileSaverModule?.saveAs || fileSaverModule?.default?.saveAs || fileSaverModule?.default;
+    return saveAsFn;
+}
 
 function SusExport({ filters }) {
     const [selectedMonth, setSelectedMonth] = useState(moment().month() + 1);
@@ -83,9 +91,10 @@ function SusExport({ filters }) {
                 month: selectedMonth,
                 year: selectedYear
             }
-        }).then(res => {
+        }).then(async res => {
+            const saveAs = await getSaveAs();
             const blob = new Blob([res.data.content], { type: "text/plain;charset=utf-8" });
-            fileSaver.saveAs(blob, res.data.filename);
+            saveAs(blob, res.data.filename);
             message.success(`Arquivo ${type} gerado com sucesso!`);
         }).catch(err => {
             console.error("Erro na exportação", err);
@@ -95,13 +104,17 @@ function SusExport({ filters }) {
         });
     };
 
-    const handleExportExcel = () => {
+    const handleExportExcel = async () => {
         try {
             setExporting(true);
             if (!validationData.length) {
                 message.info('Não há dados de validação para exportar.');
                 return;
             }
+
+            const xlsxModule = await import('xlsx');
+            const XLSX = xlsxModule?.default || xlsxModule;
+            const saveAs = await getSaveAs();
 
             const rows = validationData.map((item) => ({
                 Tipo: item.type || '',
@@ -123,7 +136,7 @@ function SusExport({ filters }) {
 
             const monthStr = String(selectedMonth).padStart(2, '0');
             const filename = `validacao_sus_${selectedYear}_${monthStr}.xlsx`;
-            fileSaver.saveAs(blob, filename);
+            saveAs(blob, filename);
             message.success('Planilha Excel gerada com sucesso!');
         } catch (err) {
             console.error('Erro ao exportar Excel SUS', err);
