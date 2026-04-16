@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Tag, Button, Timeline, Statistic, Modal, Form, Input, Select, DatePicker, message, List, Avatar, Empty, Upload, Descriptions } from 'antd';
+import { Row, Col, Card, Tag, Button, Timeline, Statistic, Modal, Form, Input, Select, DatePicker, List, Avatar, Empty, Upload, Descriptions, App } from 'antd';
 import { useSelector } from 'react-redux';
 import FeatherIcon from 'feather-icons-react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -36,6 +36,7 @@ function ChildDashboard({ params }) {
   const [formEvo] = Form.useForm();
   const [formMed] = Form.useForm();
   const [formReferral] = Form.useForm();
+  const { message, modal } = App.useApp();
 
   const router = useRouter();
 
@@ -381,7 +382,27 @@ function ChildDashboard({ params }) {
 
   const getUploadProps = (docType) => ({
     name: 'file',
-    action: `${api.defaults.baseURL}/children/${childId}/docs?doc_type=${docType}`,
+    customRequest: async ({ file, onSuccess, onError, onProgress }) => {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await api.post(`/children/${childId}/docs?doc_type=${docType}`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          onUploadProgress: (event) => {
+            if (!onProgress || !event.total) return;
+            const percent = Math.round((event.loaded / event.total) * 100);
+            onProgress({ percent });
+          },
+        });
+
+        if (onSuccess) onSuccess(response.data, file);
+      } catch (error) {
+        if (onError) onError(error);
+      }
+    },
     onChange(info) {
       if (info.file.status === 'done') {
         message.success(`${info.file.name} enviado com sucesso`);
@@ -392,6 +413,29 @@ function ChildDashboard({ params }) {
     },
     showUploadList: true,
   });
+
+  const handleDeleteDoc = (docType, label) => {
+    modal.confirm({
+      title: `Excluir ${label}?`,
+      content: 'Esta ação remove o vínculo e o arquivo físico do servidor.',
+      okText: 'Excluir',
+      cancelText: 'Cancelar',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await api.delete(`/children/${childId}/docs?doc_type=${docType}`);
+          message.success(`${label} excluído com sucesso`);
+          fetchData();
+        } catch (error) {
+          const detail =
+            error?.response?.data?.detail ||
+            error?.response?.data?.error ||
+            'Erro ao excluir documento.';
+          message.error(detail);
+        }
+      },
+    });
+  };
 
   const getFileUrl = (url) => {
     if (!url) return null;
@@ -635,44 +679,84 @@ function ChildDashboard({ params }) {
                             <strong>Laudo médico:</strong>{' '}
                             {renderFileLink(child.report_url)}
                           </p>
-                          <Upload {...getUploadProps('report')}>
-                            <Button size="small" icon={<FeatherIcon icon="upload" size={14} />}>
-                              Enviar Laudo
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <Upload {...getUploadProps('report')}>
+                              <Button size="small" icon={<FeatherIcon icon="upload" size={14} />}>
+                                Enviar Laudo
+                              </Button>
+                            </Upload>
+                            <Button
+                              size="small"
+                              danger
+                              disabled={!child.report_url}
+                              onClick={() => handleDeleteDoc('report', 'laudo médico')}
+                            >
+                              Excluir
                             </Button>
-                          </Upload>
+                          </div>
                         </Col>
                         <Col span={24} style={{ marginTop: 16 }}>
                           <p>
                             <strong>Documento da criança (RG/CPF):</strong>{' '}
                             {renderFileLink(child.child_id_url)}
                           </p>
-                          <Upload {...getUploadProps('child_id')}>
-                            <Button size="small" icon={<FeatherIcon icon="upload" size={14} />}>
-                              Enviar Documento
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <Upload {...getUploadProps('child_id')}>
+                              <Button size="small" icon={<FeatherIcon icon="upload" size={14} />}>
+                                Enviar Documento
+                              </Button>
+                            </Upload>
+                            <Button
+                              size="small"
+                              danger
+                              disabled={!child.child_id_url}
+                              onClick={() => handleDeleteDoc('child_id', 'documento da criança')}
+                            >
+                              Excluir
                             </Button>
-                          </Upload>
+                          </div>
                         </Col>
                         <Col span={24} style={{ marginTop: 16 }}>
                           <p>
                             <strong>Cartão de vacinação:</strong>{' '}
                             {renderFileLink(child.vaccination_card_url)}
                           </p>
-                          <Upload {...getUploadProps('vaccination')}>
-                            <Button size="small" icon={<FeatherIcon icon="upload" size={14} />}>
-                              Enviar Cartão
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <Upload {...getUploadProps('vaccination')}>
+                              <Button size="small" icon={<FeatherIcon icon="upload" size={14} />}>
+                                Enviar Cartão
+                              </Button>
+                            </Upload>
+                            <Button
+                              size="small"
+                              danger
+                              disabled={!child.vaccination_card_url}
+                              onClick={() => handleDeleteDoc('vaccination', 'cartão de vacinação')}
+                            >
+                              Excluir
                             </Button>
-                          </Upload>
+                          </div>
                         </Col>
                         <Col span={24} style={{ marginTop: 16 }}>
                           <p>
                             <strong>Histórico escolar:</strong>{' '}
                             {renderFileLink(child.school_history_url)}
                           </p>
-                          <Upload {...getUploadProps('school')}>
-                            <Button size="small" icon={<FeatherIcon icon="upload" size={14} />}>
-                              Enviar Histórico
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <Upload {...getUploadProps('school')}>
+                              <Button size="small" icon={<FeatherIcon icon="upload" size={14} />}>
+                                Enviar Histórico
+                              </Button>
+                            </Upload>
+                            <Button
+                              size="small"
+                              danger
+                              disabled={!child.school_history_url}
+                              onClick={() => handleDeleteDoc('school', 'histórico escolar')}
+                            >
+                              Excluir
                             </Button>
-                          </Upload>
+                          </div>
                         </Col>
                       </Row>
                     </Cards>

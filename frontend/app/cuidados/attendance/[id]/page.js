@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Form, Input, Button, Descriptions, Divider, List, Tag, Timeline, Avatar, Upload, Modal, Select, Tooltip, App } from 'antd';
+import { Row, Col, Card, Form, Input, Button, Descriptions, Divider, List, Tag, Timeline, Avatar, Upload, Modal, Select, Tooltip, App, Switch, DatePicker } from 'antd';
 import { Main } from '../../../../src/container/styled';
 import { Cards } from '../../../../src/components/cards/frame/cards-frame';
 import api from '../../../../src/config/api/axios';
@@ -19,7 +19,9 @@ function AttendancePage({ params }) {
     const [evolutions, setEvolutions] = useState([]);
     const [medications, setMedications] = useState([]);
     const [professionalMap, setProfessionalMap] = useState({});
+    const [professionals, setProfessionals] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [timelineCollapsed, setTimelineCollapsed] = useState(false);
     const [form] = Form.useForm();
     const [medForm] = Form.useForm();
     const [isMedModalOpen, setIsMedModalOpen] = useState(false);
@@ -51,6 +53,12 @@ function AttendancePage({ params }) {
         try {
             const attendanceRes = await api.get(`/attendances/${id}`);
             setAttendance(attendanceRes.data);
+            try {
+                const professionalsRes = await api.get('/professionals/basic');
+                setProfessionals(Array.isArray(professionalsRes.data) ? professionalsRes.data : []);
+            } catch (professionalsError) {
+                console.error(professionalsError);
+            }
 
             if (attendanceRes.data.child_id) {
                 const childId = attendanceRes.data.child_id;
@@ -189,7 +197,31 @@ function AttendancePage({ params }) {
 
     const getUploadProps = (docType) => ({
         name: 'file',
-        action: `${api.defaults.baseURL}/children/${child?.id}/docs?doc_type=${docType}`,
+        customRequest: async ({ file, onSuccess, onError, onProgress }) => {
+            try {
+                if (!child?.id) {
+                    throw new Error('Criança não encontrada para upload.');
+                }
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const response = await api.post(`/children/${child.id}/docs?doc_type=${docType}`, formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                    },
+                    onUploadProgress: (event) => {
+                        if (!onProgress || !event.total) return;
+                        const percent = Math.round((event.loaded / event.total) * 100);
+                        onProgress({ percent });
+                    },
+                });
+
+                if (onSuccess) onSuccess(response.data, file);
+            } catch (error) {
+                if (onError) onError(error);
+            }
+        },
         onChange(info) {
             if (info.file.status === 'done') {
                 message.success(`${info.file.name} enviado com sucesso`);
@@ -232,6 +264,7 @@ function AttendancePage({ params }) {
                 protocol_scores: protocolScores
             });
 
+            let biometricsUpdateBlocked = false;
             if (biometricsParts.length) {
                 const updatedChild = {
                     ...child,
@@ -242,12 +275,91 @@ function AttendancePage({ params }) {
                             ? values.cephalic_perimeter
                             : child.cephalic_perimeter
                 };
-                await api.put(`/children/${child.id}`, updatedChild);
+                try {
+                    await api.put(`/children/${child.id}`, updatedChild);
+                } catch (childUpdateError) {
+                    const status = childUpdateError?.response?.status;
+                    if (status === 403) {
+                        biometricsUpdateBlocked = true;
+                    } else {
+                        throw childUpdateError;
+                    }
+                }
+            }
+
+            let referralRegistered = false;
+            let referralSaveFailed = false;
+            if (values.create_referral) {
+                const selectedProfessional = professionals.find(
+                    (p) => p.id === values.referral_professional_id,
+                );
+                const referralSpecialty =
+                    values.referral_specialty ||
+                    selectedProfessional?.function_role ||
+                    selectedProfessional?.specialty ||
+                    'Outros';
+                const referralProfessionalName =
+                    values.referral_professional_name ||
+                    selectedProfessional?.name ||
+                    null;
+                const referralDate = values.referral_date || dayjs();
+
+                try {
+                    await api.post('/health-referrals/', {
+                        child_id: child.id,
+                        specialty: referralSpecialty,
+                        professional_name: referralProfessionalName,
+                        referral_date: referralDate.format('YYYY-MM-DD'),
+                        priority: values.referral_priority || 'medium',
+                        notes: values.referral_notes || null,
+                    });
+
+                    const referralParts = [
+                        `Especialidade: ${referralSpecialty}`,
+                        referralProfessionalName
+                            ? `Profissional: ${referralProfessionalName}`
+                            : null,
+                        `Prioridade: ${
+                            values.referral_priority === 'high'
+                                ? 'Alta'
+                                : values.referral_priority === 'low'
+                                ? 'Baixa'
+                                : 'Média'
+                        }`,
+                        values.referral_notes ? `Observações: ${values.referral_notes}` : null,
+                    ].filter(Boolean);
+
+                    await api.post(`/children/${child.id}/evolutions`, {
+                        child_id: child.id,
+                        professional_id: professionalId,
+                        attendance_id: parseInt(id, 10),
+                        service_type: 'Encaminhamento',
+                        evolution_report: `Encaminhamento realizado - ${referralParts.join(' | ')}`,
+                        intermittences: null,
+                        protocol_scores: null,
+                    });
+                    referralRegistered = true;
+                } catch (referralError) {
+                    console.error(referralError);
+                    referralSaveFailed = true;
+                }
             }
 
             await api.put(`/attendances/${id}/finish?notes=${values.notes || ''}`);
 
-            message.success('Atendimento finalizado!');
+            if (referralSaveFailed) {
+                message.warning(
+                    'Atendimento finalizado, mas o encaminhamento não foi registrado.',
+                );
+            } else if (biometricsUpdateBlocked) {
+                message.warning(
+                    'Atendimento finalizado, mas a biometria da criança não foi atualizada por falta de permissão.',
+                );
+            } else if (referralRegistered) {
+                message.success('Atendimento finalizado e encaminhamento registrado!');
+            } else {
+                message.success('Atendimento finalizado!');
+            }
             router.push('/cuidados/my-patients');
         } catch (error) {
             console.error(error);
@@ -474,57 +586,69 @@ function AttendancePage({ params }) {
                             )}
                         </Col>
                         <Col xs={24} md={16}>
-                            <Cards title="Linha do Tempo Multidisciplinar" headless={false}>
-                                {evolutions.length === 0 ? (
-                                    <p>Nenhuma evolução registrada ainda.</p>
-                                ) : (
-                                    <Timeline
-                                        mode="left"
-                                        items={evolutions.map((evo) => {
-                                            const prof = evo.professional_id
-                                                ? professionalMap[evo.professional_id]
-                                                : null;
-                                            return {
-                                                key: evo.id,
-                                                label: dayjs(evo.date_service).format('DD/MM/YYYY HH:mm'),
-                                                color: 'blue',
-                                                children: (
-                                                    <>
-                                                        <p>
-                                                            <strong>{evo.service_type}</strong>
-                                                        </p>
-                                                        {prof && (
+                            <Cards
+                                title="Linha do Tempo Multidisciplinar"
+                                headless={false}
+                                extra={
+                                    <Button
+                                        size="small"
+                                        onClick={() => setTimelineCollapsed((prev) => !prev)}
+                                    >
+                                        {timelineCollapsed ? 'Mostrar' : 'Recolher'}
+                                    </Button>
+                                }
+                            >
+                                {!timelineCollapsed &&
+                                    (evolutions.length === 0 ? (
+                                        <p>Nenhuma evolução registrada ainda.</p>
+                                    ) : (
+                                        <Timeline
+                                            mode="left"
+                                            items={evolutions.map((evo) => {
+                                                const prof = evo.professional_id
+                                                    ? professionalMap[evo.professional_id]
+                                                    : null;
+                                                return {
+                                                    key: evo.id,
+                                                    label: dayjs(evo.date_service).format('DD/MM/YYYY HH:mm'),
+                                                    color: 'blue',
+                                                    children: (
+                                                        <>
                                                             <p>
-                                                                <small>
-                                                                    Profissional: {prof.name}
-                                                                    {prof.registry_number
-                                                                        ? ` (${prof.registry_number})`
-                                                                        : ''}
-                                                                </small>
+                                                                <strong>{evo.service_type}</strong>
                                                             </p>
-                                                        )}
-                                                        <p>{evo.evolution_report}</p>
-                                                        {evo.protocol_scores && (
-                                                            <p>
-                                                                <small>
-                                                                    Escalas / Avaliação:{' '}
-                                                                    {evo.protocol_scores}
-                                                                </small>
-                                                            </p>
-                                                        )}
-                                                        {evo.intermittences && (
-                                                            <p style={{ color: 'red' }}>
-                                                                <small>
-                                                                    Intercorrência: {evo.intermittences}
-                                                                </small>
-                                                            </p>
-                                                        )}
-                                                    </>
-                                                ),
-                                            };
-                                        })}
-                                    />
-                                )}
+                                                            {prof && (
+                                                                <p>
+                                                                    <small>
+                                                                        Profissional: {prof.name}
+                                                                        {prof.registry_number
+                                                                            ? ` (${prof.registry_number})`
+                                                                            : ''}
+                                                                    </small>
+                                                                </p>
+                                                            )}
+                                                            <p>{evo.evolution_report}</p>
+                                                            {evo.protocol_scores && (
+                                                                <p>
+                                                                    <small>
+                                                                        Escalas / Avaliação:{' '}
+                                                                        {evo.protocol_scores}
+                                                                    </small>
+                                                                </p>
+                                                            )}
+                                                            {evo.intermittences && (
+                                                                <p style={{ color: 'red' }}>
+                                                                    <small>
+                                                                        Intercorrência: {evo.intermittences}
+                                                                    </small>
+                                                                </p>
+                                                            )}
+                                                        </>
+                                                    ),
+                                                };
+                                            })}
+                                        />
+                                    ))}
                             </Cards>
 
                             <Cards
@@ -599,6 +723,98 @@ function AttendancePage({ params }) {
                                     </Form.Item>
                                     <Form.Item name="notes" label="Observações Administrativas">
                                         <Input />
+                                    </Form.Item>
+                                    <Divider />
+                                    <Form.Item
+                                        name="create_referral"
+                                        label="Encaminhar para outro profissional"
+                                        valuePropName="checked"
+                                    >
+                                        <Switch />
+                                    </Form.Item>
+                                    <Form.Item shouldUpdate noStyle>
+                                        {({ getFieldValue }) =>
+                                            getFieldValue('create_referral') ? (
+                                                <>
+                                                    <Form.Item
+                                                        name="referral_professional_id"
+                                                        label="Profissional de destino (opcional)"
+                                                    >
+                                                        <Select
+                                                            allowClear
+                                                            showSearch
+                                                            placeholder="Selecione um profissional"
+                                                            optionFilterProp="label"
+                                                            filterOption={(input, option) =>
+                                                                String(option?.label || '')
+                                                                    .toLowerCase()
+                                                                    .includes(String(input || '').toLowerCase())
+                                                            }
+                                                            options={professionals
+                                                                .filter((p) => p.role === 'health')
+                                                                .map((p) => ({
+                                                                    value: p.id,
+                                                                    label: p.name,
+                                                                }))}
+                                                        />
+                                                    </Form.Item>
+                                                    <Form.Item
+                                                        name="referral_specialty"
+                                                        label="Especialidade de encaminhamento"
+                                                        rules={[{ required: true, message: 'Obrigatório' }]}
+                                                    >
+                                                        <Select>
+                                                            <Option value="Psicólogo">Psicólogo</Option>
+                                                            <Option value="Nutricionista">Nutricionista</Option>
+                                                            <Option value="Dentista">Dentista</Option>
+                                                            <Option value="Fonoaudiólogo">Fonoaudiólogo</Option>
+                                                            <Option value="Terapeuta Ocupacional">
+                                                                Terapeuta Ocupacional
+                                                            </Option>
+                                                            <Option value="Médico Clínico">
+                                                                Médico Clínico
+                                                            </Option>
+                                                            <Option value="Psiquiatra">Psiquiatra</Option>
+                                                            <Option value="Outros">Outros</Option>
+                                                        </Select>
+                                                    </Form.Item>
+                                                    <Form.Item
+                                                        name="referral_professional_name"
+                                                        label="Nome do profissional (se externo)"
+                                                    >
+                                                        <Input placeholder="Ex: Dr. Silva" />
+                                                    </Form.Item>
+                                                    <Form.Item
+                                                        name="referral_date"
+                                                        label="Data do encaminhamento"
+                                                        initialValue={dayjs()}
+                                                        rules={[{ required: true, message: 'Obrigatório' }]}
+                                                    >
+                                                        <DatePicker
+                                                            format="DD/MM/YYYY"
+                                                            style={{ width: '100%' }}
+                                                        />
+                                                    </Form.Item>
+                                                    <Form.Item
+                                                        name="referral_priority"
+                                                        label="Prioridade"
+                                                        initialValue="medium"
+                                                    >
+                                                        <Select>
+                                                            <Option value="low">Baixa</Option>
+                                                            <Option value="medium">Média</Option>
+                                                            <Option value="high">Alta</Option>
+                                                        </Select>
+                                                    </Form.Item>
+                                                    <Form.Item
+                                                        name="referral_notes"
+                                                        label="Observações do encaminhamento"
+                                                    >
+                                                        <Input.TextArea rows={2} />
+                                                    </Form.Item>
+                                                </>
+                                            ) : null
+                                        }
                                     </Form.Item>
                                     <Divider />
                                     <Button type="primary" htmlType="submit" size="large">

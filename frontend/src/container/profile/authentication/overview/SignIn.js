@@ -95,6 +95,7 @@ function SignIn() {
           status: professional?.status || 'active',
           avatar_url: professional?.avatar_url || null,
           cover_url: professional?.cover_url || null,
+          access_overrides: professional?.access_overrides || null,
         };
 
         if (accessToken) {

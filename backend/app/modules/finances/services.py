@@ -261,8 +261,26 @@ class FinanceService:
 
     @staticmethod
     def transfer_funds(db: Session, transfer: TransferCreate):
-        source_wallet = FinanceService.get_wallet_by_id(db, transfer.source_wallet_id)
-        target_wallet = FinanceService.get_wallet_by_id(db, transfer.target_wallet_id)
+        from sqlalchemy import with_for_update
+        
+        # Lock wallets to prevent race condition (double-spend)
+        source_wallet = (
+            db.query(models.Wallet)
+            .filter(models.Wallet.id == transfer.source_wallet_id)
+            .with_for_update()
+            .first()
+        )
+        if not source_wallet:
+            raise HTTPException(status_code=404, detail="Carteira de origem não encontrada")
+            
+        target_wallet = (
+            db.query(models.Wallet)
+            .filter(models.Wallet.id == transfer.target_wallet_id)
+            .with_for_update()
+            .first()
+        )
+        if not target_wallet:
+            raise HTTPException(status_code=404, detail="Carteira de destino não encontrada")
 
         if source_wallet.id == target_wallet.id:
             raise HTTPException(status_code=400, detail="Não é possível transferir para a mesma carteira")

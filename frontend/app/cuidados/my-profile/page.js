@@ -30,7 +30,7 @@ function ProfessionalDashboard() {
 
     const fetchDashboard = async () => {
         try {
-            const response = await api.get(`/professional/${professionalId}/dashboard`);
+            const response = await api.get(`/professionals/${professionalId}/dashboard`);
             setData(response.data);
         } catch (error) {
             console.error(error);

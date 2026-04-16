@@ -207,7 +207,7 @@ function OperationalDashboard() {
               </Button>
               <Button
                 icon={<FeatherIcon icon="user-check" size={16} />}
-                href="/admin/dashboard/users/dataTable"
+                href="/admin/collaborators"
               >
                 Colaboradores
               </Button>
@@ -228,7 +228,7 @@ function DashboardRoutesPage() {
   );
 
   if (slug === 'users') {
-    if (subSlug === 'dataTable') {
+    if (subSlug === 'dataTable' || subSlug === 'collaborators') {
       return <UserDataTable />;
     }
     if (subSlug === 'add-user') {

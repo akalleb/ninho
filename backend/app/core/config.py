@@ -21,7 +21,19 @@ SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY", "")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
 
 # JWT
-SECRET_KEY = os.getenv("SECRET_KEY", "ninho-secret-key-change-in-production-2026")
+_SECRET_KEY_ENV = os.getenv("SECRET_KEY")
+
+# Em produção, SECRET_KEY deve ser obrigatório
+_env = os.getenv("ENVIRONMENT", "").strip().lower()
+_is_prod = _env in ("prod", "production")
+
+if _is_prod and not _SECRET_KEY_ENV:
+    raise ValueError(
+        "SECRET_KEY deve ser definido em ambiente de produção. "
+        "Gere uma chave segura com: openssl rand -base64 32"
+    )
+
+SECRET_KEY = _SECRET_KEY_ENV or "ninho-secret-key-change-in-production-2026"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 

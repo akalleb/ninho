@@ -1,13 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Table, Button, Modal, App, Drawer, Descriptions, Tag, Avatar, Divider, Input } from 'antd';
+import { Row, Col, Table, Button, Modal, App, Drawer, Descriptions, Tag, Avatar, Divider, Input, Checkbox } from 'antd';
 import FeatherIcon from 'feather-icons-react';
 import { useRouter } from 'next/navigation';
+import { useSelector } from 'react-redux';
 import { PageHeader } from '../../../components/page-headers/page-headers';
 import { Main } from '../../styled';
 import { Cards } from '../../../components/cards/frame/cards-frame';
 import api from '../../../config/api/axios';
 import { UserOutlined } from '@ant-design/icons';
 import moment from 'moment';
+import {
+  ACCESS_FEATURES,
+  getAccessConfigOptionsForRole,
+  getDefaultAccessForRole,
+  hasFeatureAccess,
+} from '../../../utility/accessControl';
 
 function UserDataTable() {
   const [professionals, setProfessionals] = useState([]);
@@ -20,9 +27,24 @@ function UserDataTable() {
   const [forceDeleteLoading, setForceDeleteLoading] = useState(false);
   const [forceDeleteMode, setForceDeleteMode] = useState('standard');
   const [forceDeleteReason, setForceDeleteReason] = useState('');
+  const [accessModalOpen, setAccessModalOpen] = useState(false);
+  const [accessSaving, setAccessSaving] = useState(false);
+  const [accessTarget, setAccessTarget] = useState(null);
+  const [allowPages, setAllowPages] = useState([]);
+  const [denyPages, setDenyPages] = useState([]);
+  const [allowFeatures, setAllowFeatures] = useState([]);
+  const [denyFeatures, setDenyFeatures] = useState([]);
   const router = useRouter();
+  const authState = useSelector((state) => state.auth.login);
+  const authUser = typeof authState === 'object' && authState ? authState : null;
   const { notification } = App.useApp();
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  const canCreate = hasFeatureAccess(authUser, ACCESS_FEATURES.collaboratorsCreate);
+  const canEdit = hasFeatureAccess(authUser, ACCESS_FEATURES.collaboratorsEdit);
+  const canDelete = hasFeatureAccess(authUser, ACCESS_FEATURES.collaboratorsDelete);
+  const canToggleStatus = hasFeatureAccess(authUser, ACCESS_FEATURES.collaboratorsStatus);
+  const canManageAccess = hasFeatureAccess(authUser, ACCESS_FEATURES.collaboratorsAccessManage);
+  const accessOptions = getAccessConfigOptionsForRole(accessTarget?.role);
 
   const getApiErrorMessage = (error) => {
     const status = error?.response?.status;
@@ -66,7 +88,112 @@ function UserDataTable() {
   };
 
   const handleEdit = (id) => {
-    router.push(`/admin/dashboard/users/add-user?id=${id}`);
+    router.push(`/admin/users/add-user?id=${id}`);
+  };
+
+  const openAccessConfig = async (record) => {
+    if (!canManageAccess) return;
+    try {
+      const { data } = await api.get(`/professionals/${record.id}/access-overrides`);
+      const defaults = getDefaultAccessForRole(record?.role);
+      const denyPagesFromApi = data?.deny_pages || [];
+      const denyFeaturesFromApi = data?.deny_features || [];
+      const mergedAllowPages = Array.from(
+        new Set([...(defaults.pages || []), ...(data?.allow_pages || [])]),
+      ).filter((key) => !denyPagesFromApi.includes(key));
+      const mergedAllowFeatures = Array.from(
+        new Set([...(defaults.features || []), ...(data?.allow_features || [])]),
+      ).filter((key) => !denyFeaturesFromApi.includes(key));
+      setAccessTarget(record);
+      setAllowPages(mergedAllowPages);
+      setDenyPages(denyPagesFromApi);
+      setAllowFeatures(mergedAllowFeatures);
+      setDenyFeatures(denyFeaturesFromApi);
+      setAccessModalOpen(true);
+    } catch (error) {
+      notification.error({
+        message: 'Erro ao carregar permissões',
+        description: getApiErrorMessage(error),
+      });
+    }
+  };
+
+  const saveAccessConfig = async () => {
+    if (!accessTarget) return;
+    setAccessSaving(true);
+    try {
+      const defaults = getDefaultAccessForRole(accessTarget?.role);
+      const normalizedDenyPages = Array.from(new Set(denyPages || []));
+      const normalizedDenyFeatures = Array.from(new Set(denyFeatures || []));
+      const normalizedAllowPages = Array.from(
+        new Set((allowPages || []).filter((key) => !normalizedDenyPages.includes(key))),
+      );
+      const normalizedAllowFeatures = Array.from(
+        new Set((allowFeatures || []).filter((key) => !normalizedDenyFeatures.includes(key))),
+      );
+      const implicitDenyPages = (defaults.pages || []).filter(
+        (key) => !normalizedAllowPages.includes(key),
+      );
+      const implicitDenyFeatures = (defaults.features || []).filter(
+        (key) => !normalizedAllowFeatures.includes(key),
+      );
+      const finalDenyPages = Array.from(new Set([...normalizedDenyPages, ...implicitDenyPages]));
+      const finalDenyFeatures = Array.from(
+        new Set([...normalizedDenyFeatures, ...implicitDenyFeatures]),
+      );
+      const overridesAllowPages = normalizedAllowPages.filter(
+        (key) => !(defaults.pages || []).includes(key),
+      );
+      const overridesAllowFeatures = normalizedAllowFeatures.filter(
+        (key) => !(defaults.features || []).includes(key),
+      );
+
+      await api.put(`/professionals/${accessTarget.id}/access-overrides`, {
+        access_overrides: {
+          allow_pages: overridesAllowPages,
+          deny_pages: finalDenyPages,
+          allow_features: overridesAllowFeatures,
+          deny_features: finalDenyFeatures,
+        },
+      });
+      notification.success({
+        message: 'Permissões atualizadas com sucesso',
+      });
+      setAccessModalOpen(false);
+      setAccessTarget(null);
+      fetchProfessionals();
+    } catch (error) {
+      notification.error({
+        message: 'Erro ao salvar permissões',
+        description: getApiErrorMessage(error),
+      });
+    } finally {
+      setAccessSaving(false);
+    }
+  };
+
+  const handleAllowPagesChange = (vals) => {
+    const next = vals || [];
+    setAllowPages(next);
+    setDenyPages((prev) => (prev || []).filter((item) => !next.includes(item)));
+  };
+
+  const handleDenyPagesChange = (vals) => {
+    const next = vals || [];
+    setDenyPages(next);
+    setAllowPages((prev) => (prev || []).filter((item) => !next.includes(item)));
+  };
+
+  const handleAllowFeaturesChange = (vals) => {
+    const next = vals || [];
+    setAllowFeatures(next);
+    setDenyFeatures((prev) => (prev || []).filter((item) => !next.includes(item)));
+  };
+
+  const handleDenyFeaturesChange = (vals) => {
+    const next = vals || [];
+    setDenyFeatures(next);
+    setAllowFeatures((prev) => (prev || []).filter((item) => !next.includes(item)));
   };
 
   const openForceDelete = async (record) => {
@@ -155,6 +282,7 @@ function UserDataTable() {
   };
 
   const handleToggleStatus = async (record) => {
+    if (!canToggleStatus) return;
     const newStatus = record.status === 'active' ? 'inactive' : 'active';
     try {
       await api.put(`/professionals/${record.id}/status`, { status: newStatus });
@@ -316,6 +444,7 @@ function UserDataTable() {
           type={status === 'active' ? 'primary' : 'default'}
           onClick={() => handleToggleStatus(record)}
           ghost={status !== 'active'}
+          disabled={!canToggleStatus}
         >
           {status === 'active' ? 'Ativo' : 'Inativo'}
         </Button>
@@ -332,12 +461,15 @@ function UserDataTable() {
                 icon={<FeatherIcon icon="eye" size={14} />}
                 onClick={() => handleView(record)}
             />
+            {canEdit && (
             <Button 
                 size="small" 
                 type="primary" 
                 icon={<FeatherIcon icon="edit" size={14} />}
                 onClick={() => handleEdit(record.id)}
             />
+            )}
+            {canDelete && (
             <Button 
                 size="small" 
                 type="primary"
@@ -345,6 +477,17 @@ function UserDataTable() {
                 icon={<FeatherIcon icon="trash-2" size={14} />}
                 onClick={() => handleDelete(record.id)}
             />
+            )}
+            {canManageAccess && (
+            <Button
+                size="small"
+                type="default"
+                icon={<FeatherIcon icon="shield" size={14} />}
+                onClick={() => openAccessConfig(record)}
+            >
+              Acessos
+            </Button>
+            )}
         </div>
       ),
     },
@@ -359,10 +502,12 @@ function UserDataTable() {
           <Button key="2" type="default" size="small" onClick={() => router.push('/admin/notifications')}>
              <FeatherIcon icon="bell" size={14} /> Gerenciar Notificações
           </Button>,
-          <Button key="1" type="primary" size="small" onClick={() => router.push('/admin/dashboard/users/add-user')}>
+          canCreate ? (
+          <Button key="1" type="primary" size="small" onClick={() => router.push('/admin/users/add-user')}>
             <FeatherIcon icon="plus" size={14} /> Adicionar Novo Colaborador
-          </Button>,
-        ]}
+          </Button>
+          ) : null,
+        ].filter(Boolean)}
       />
       <Main>
         <Row gutter={25}>
@@ -529,6 +674,62 @@ function UserDataTable() {
               />
             </>
           )}
+        </Modal>
+
+        <Modal
+          title={`Permissões personalizadas: ${accessTarget?.name || ''}`}
+          open={accessModalOpen}
+          okText="Salvar permissões"
+          cancelText="Cancelar"
+          onCancel={() => {
+            if (accessSaving) return;
+            setAccessModalOpen(false);
+            setAccessTarget(null);
+          }}
+          onOk={saveAccessConfig}
+          confirmLoading={accessSaving}
+          width={900}
+        >
+          <p style={{ marginBottom: 16 }}>
+            Mantenha as restrições padrão por papel e ajuste permissões individuais liberando ou restringindo páginas e funções.
+          </p>
+          <Row gutter={16}>
+            <Col xs={24} md={12}>
+              <h4>Liberar páginas</h4>
+              <Checkbox.Group
+                options={accessOptions.pages}
+                value={allowPages}
+                onChange={handleAllowPagesChange}
+              />
+            </Col>
+            <Col xs={24} md={12}>
+              <h4>Restringir páginas</h4>
+              <Checkbox.Group
+                options={accessOptions.pages}
+                value={denyPages}
+                onChange={handleDenyPagesChange}
+              />
+            </Col>
+          </Row>
+          <Divider />
+          <Row gutter={16}>
+            <Col xs={24} md={12}>
+              <h4>Liberar funções</h4>
+              <Checkbox.Group
+                options={accessOptions.features}
+                value={allowFeatures}
+                onChange={handleAllowFeaturesChange}
+              />
+            </Col>
+            <Col xs={24} md={12}>
+              <h4>Restringir funções</h4>
+              <Checkbox.Group
+                options={accessOptions.features}
+                value={denyFeatures}
+                onChange={handleDenyFeaturesChange}
+              />
+            </Col>
+          </Row>
         </Modal>
       </Main>
     </>

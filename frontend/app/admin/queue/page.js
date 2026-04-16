@@ -233,13 +233,21 @@ function QueuePage() {
             >
                 <Form form={form} layout="vertical">
                     <Form.Item name="child_id" label="Criança" rules={[{ required: true, message: 'Selecione uma criança' }]}>
-                        <Select showSearch optionFilterProp="children" filterOption={(input, option) =>
-                            option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-                        }>
-                            {children.map(c => (
-                                <Option key={c.id} value={c.id}>{c.name}</Option>
-                            ))}
-                        </Select>
+                        <Select
+                            showSearch
+                            allowClear
+                            placeholder="Buscar criança por nome"
+                            optionFilterProp="label"
+                            filterOption={(input, option) =>
+                                String(option?.label || '')
+                                    .toLowerCase()
+                                    .includes(String(input || '').toLowerCase())
+                            }
+                            options={children.map((c) => ({
+                                value: c.id,
+                                label: c.name || `Criança #${c.id}`,
+                            }))}
+                        />
                     </Form.Item>
                     <Form.Item name="professional_id" label="Profissional">
                         <Select allowClear>

@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr, field_validator
 from datetime import datetime, date
-from typing import Optional, Dict
+from typing import Optional, Dict, List
+import json
 
 from ...core.security import decrypt_data
 
@@ -31,6 +32,7 @@ class ProfessionalBase(BaseModel):
     website: str | None = None
     social_media: str | None = None
     skills: str | None = None
+    access_overrides: Dict[str, List[str]] | None = None
 
 class ProfessionalCreate(ProfessionalBase):
     password: str
@@ -46,6 +48,21 @@ class Professional(ProfessionalBase):
     @classmethod
     def decrypt_sensitive_data(cls, v):
         return decrypt_data(v) if v else None
+
+    @field_validator('access_overrides', mode='before')
+    @classmethod
+    def parse_access_overrides(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, dict):
+            return v
+        if isinstance(v, str):
+            try:
+                parsed = json.loads(v)
+                return parsed if isinstance(parsed, dict) else None
+            except Exception:
+                return None
+        return None
 
     class Config:
         from_attributes = True
@@ -64,6 +81,9 @@ class ProfessionalBasic(BaseModel):
 
 class ProfessionalStatusUpdate(BaseModel):
     status: str
+
+class ProfessionalAccessOverridesUpdate(BaseModel):
+    access_overrides: Dict[str, List[str]]
 
 class ProfessionalForceDeleteRequest(BaseModel):
     confirm: str

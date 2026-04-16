@@ -88,6 +88,15 @@ async def upload_child_doc(
 ):
     return await ChildService.upload_doc(db, child_id, doc_type, file)
 
+@router.delete("/{child_id}/docs")
+def delete_child_doc(
+    child_id: int,
+    doc_type: str = Query(..., enum=["report", "child_id", "vaccination", "school"]),
+    db: Session = Depends(database.get_db),
+    current_user=Depends(get_current_admin_or_operational),
+):
+    return ChildService.delete_doc(db, child_id, doc_type)
+
 @router.post("/{child_id}/medications", response_model=ChildMedicationResponse)
 def add_medication(child_id: int, med: ChildMedicationCreate, db: Session = Depends(database.get_db)):
     return ChildService.add_medication(db, child_id, med)

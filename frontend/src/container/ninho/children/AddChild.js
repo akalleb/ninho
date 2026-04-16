@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Form, Input, Select, Button, DatePicker, InputNumber, Switch, Upload, message, App, Card } from 'antd';
+import { Row, Col, Form, Input, Select, Button, DatePicker, InputNumber, Switch, Upload, App, Card } from 'antd';
 import FeatherIcon from 'feather-icons-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Main } from '../../styled';
@@ -17,7 +17,7 @@ function AddChild() {
   const searchParams = useSearchParams();
   const childId = searchParams.get('id');
   const isEditMode = !!childId;
-  const { notification } = App.useApp();
+  const { notification, message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [families, setFamilies] = useState([]);
   const hasMedicalReport = Form.useWatch('has_medical_report', form);
@@ -290,7 +290,31 @@ function AddChild() {
                               <Form.Item label="Laudo Médico (upload)">
                                 <Upload
                                   name="file"
-                                  action={`${api.defaults.baseURL}/children/${childId}/docs?doc_type=report`}
+                                  customRequest={async ({ file, onSuccess, onError, onProgress }) => {
+                                    try {
+                                      const formData = new FormData();
+                                      formData.append('file', file);
+
+                                      const response = await api.post(
+                                        `/children/${childId}/docs?doc_type=report`,
+                                        formData,
+                                        {
+                                          headers: {
+                                            'Content-Type': 'multipart/form-data',
+                                          },
+                                          onUploadProgress: (event) => {
+                                            if (!onProgress || !event.total) return;
+                                            const percent = Math.round((event.loaded / event.total) * 100);
+                                            onProgress({ percent });
+                                          },
+                                        }
+                                      );
+
+                                      if (onSuccess) onSuccess(response.data, file);
+                                    } catch (error) {
+                                      if (onError) onError(error);
+                                    }
+                                  }}
                                   showUploadList
                                   onChange={(info) => {
                                     if (info.file.status === 'done') {

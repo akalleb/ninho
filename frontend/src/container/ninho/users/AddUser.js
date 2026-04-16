@@ -82,7 +82,7 @@ function AddUser() {
           : 'Colaborador cadastrado com sucesso!',
       });
       
-      router.push('/admin/dashboard/users/dataTable');
+      router.push('/admin/collaborators');
     } catch (error) {
       notification.error({
         message: 'Erro no Cadastro',
@@ -265,7 +265,7 @@ function AddUser() {
 
                   <Col xs={24}>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '30px' }}>
-                      <Button onClick={() => router.push('/admin/dashboard/users/dataTable')}>
+                      <Button onClick={() => router.push('/admin/collaborators')}>
                         Cancelar
                       </Button>
                       <Button type="primary" htmlType="submit" loading={loading} size="large">

@@ -44,7 +44,7 @@ function CareDashboard() {
           
           // 2. Stats Month (Completed) - Mocking calculation or fetch specific endpoint
           // For simplicity, let's fetch finished attendances for this pro
-          api.get(`/professional/${professionalId}/dashboard`),
+          api.get(`/professionals/${professionalId}/dashboard`),
           
           // 3. Queue & Activity
           api.get(`/attendances/?status=agendado&sort=scheduled_time&limit=3&professional_id=${professionalId}`),

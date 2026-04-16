@@ -6,6 +6,7 @@ import propTypes from 'prop-types';
 import { useSelector } from 'react-redux';
 import { getBasePath } from '../utility/getBasePath';
 import { NextNavLink } from '../components/utilities/NextLink';
+import { hasPageAccess } from '../utility/accessControl';
 
 const { SubMenu } = Menu;
 
@@ -46,7 +47,7 @@ function MenuItems({ darkMode, toggleCollapsed, topMenu, events }) {
 
   // LÓGICA DE SELEÇÃO DINÂMICA
   const getSelectedKey = () => {
-    if (pathName.includes('users/dataTable') || pathName.includes('users/add-user') || pathName.includes('dataTable')) return ['users'];
+    if (pathName.includes('users/dataTable') || pathName.includes('users/add-user') || pathName.includes('dataTable') || pathName.includes('/collaborators')) return ['users'];
     if (pathName.includes('resource-sources')) return ['resource-sources'];
     if (pathName.includes('wallets')) return ['wallets'];
     if (pathName.includes('incomes')) return ['incomes'];
@@ -109,7 +110,7 @@ function MenuItems({ darkMode, toggleCollapsed, topMenu, events }) {
       </Menu.Item>
 
       {/* Fila de Espera - visível para Admin e Operacional */}
-      {(userRole === 'admin' || userRole === 'operational') && (
+      {(userRole === 'admin' || userRole === 'operational' || hasPageAccess(authUser, 'queue_admin')) && hasPageAccess(authUser, 'queue_admin') && (
         <Menu.Item key="queue" icon={!topMenu && <FeatherIcon icon="list" />}>
           <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/queue`} activeClassName="">
             Fila de Espera
@@ -118,81 +119,111 @@ function MenuItems({ darkMode, toggleCollapsed, topMenu, events }) {
       )}
 
       {/* Visível apenas para Saúde */}
-      {userRole === 'health' && (
+      {hasPageAccess(authUser, 'my_patients') && (
         <>
           <Menu.Item key="my-patients" icon={!topMenu && <FeatherIcon icon="users" />}>
             <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/my-patients`} activeClassName="">
               Meus Pacientes
             </NextNavLink>
           </Menu.Item>
+          {hasPageAccess(authUser, 'my_profile') && (
           <Menu.Item key="my-profile" icon={!topMenu && <FeatherIcon icon="user" />}>
             <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/my-profile`} activeClassName="">
               Meu Perfil / Produção
             </NextNavLink>
           </Menu.Item>
+          )}
         </>
       )}
 
       {/* Visível para Admin e Operacional 
           A rota de projetos usa sempre /admin para garantir acesso unificado. */}
-      {(userRole === 'admin' || userRole === 'operational') && (
+      {(hasPageAccess(authUser, 'families') ||
+        hasPageAccess(authUser, 'children_admin') ||
+        hasPageAccess(authUser, 'projects') ||
+        hasPageAccess(authUser, 'warehouse')) && (
         <>
+          {hasPageAccess(authUser, 'families') && (
           <Menu.Item key="families" icon={!topMenu && <FeatherIcon icon="home" />}>
             <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/families`} activeClassName="">
               Cadastro de Famílias
             </NextNavLink>
           </Menu.Item>
+          )}
+          {hasPageAccess(authUser, 'children_admin') && (
           <Menu.Item key="children" icon={!topMenu && <FeatherIcon icon="users" />}>
             <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/children`} activeClassName="">
               Crianças / Atendidos
             </NextNavLink>
           </Menu.Item>
+          )}
+          {hasPageAccess(authUser, 'projects') && (
           <Menu.Item key="projects" icon={!topMenu && <FeatherIcon icon="folder" />}>
             <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/projects`} activeClassName="">
               Projetos
             </NextNavLink>
           </Menu.Item>
+          )}
+          {hasPageAccess(authUser, 'warehouse') && (
           <Menu.Item key="warehouse" icon={!topMenu && <FeatherIcon icon="package" />}>
             <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/warehouse`} activeClassName="">
               Almoxarifado
             </NextNavLink>
           </Menu.Item>
+          )}
         </>
       )}
 
       {/* Visível apenas para Admin */}
-      {userRole === 'admin' && (
+      {(hasPageAccess(authUser, 'collaborators') ||
+        hasPageAccess(authUser, 'reports') ||
+        hasPageAccess(authUser, 'resource_sources') ||
+        hasPageAccess(authUser, 'wallets') ||
+        hasPageAccess(authUser, 'incomes') ||
+        hasPageAccess(authUser, 'notifications')) && (
         <>
+          {hasPageAccess(authUser, 'collaborators') && (
           <Menu.Item key="users" icon={!topMenu && <FeatherIcon icon="users" />}>
-            <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/dataTable`} activeClassName="">
+            <NextNavLink onClick={toggleCollapsed} to="/admin/collaborators" activeClassName="">
               Colaboradores
             </NextNavLink>
           </Menu.Item>
+          )}
+          {hasPageAccess(authUser, 'reports') && (
           <Menu.Item key="reports" icon={!topMenu && <FeatherIcon icon="bar-chart-2" />}>
             <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/reports`} activeClassName="">
               Relatórios
             </NextNavLink>
           </Menu.Item>
+          )}
+          {hasPageAccess(authUser, 'resource_sources') && (
           <Menu.Item key="resource-sources" icon={!topMenu && <FeatherIcon icon="layers" />}>
             <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/resource-sources`} activeClassName="">
               Fontes de Recursos
             </NextNavLink>
           </Menu.Item>
+          )}
+          {hasPageAccess(authUser, 'wallets') && (
           <Menu.Item key="wallets" icon={!topMenu && <FeatherIcon icon="briefcase" />}>
             <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/wallets`} activeClassName="">
               Carteiras / Fundos
             </NextNavLink>
           </Menu.Item>
+          )}
+          {hasPageAccess(authUser, 'incomes') && (
           <Menu.Item key="incomes" icon={!topMenu && <FeatherIcon icon="trending-up" />}>
             <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/incomes`} activeClassName="">
               Entradas de Receita
             </NextNavLink>
           </Menu.Item>
+          )}
+          {hasPageAccess(authUser, 'notifications') && (
           <Menu.Item key="notifications" icon={!topMenu && <FeatherIcon icon="bell" />}>
             <NextNavLink onClick={toggleCollapsed} to={`${baseMenuPath}/notifications`} activeClassName="">
               Notificações
             </NextNavLink>
           </Menu.Item>
+          )}
         </>
       )}
     </Menu>

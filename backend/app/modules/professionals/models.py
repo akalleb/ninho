@@ -59,6 +59,7 @@ class Professional(Base):
     website = Column(String, nullable=True)
     social_media = Column(Text, nullable=True) # JSON stored as string: { "facebook": "...", "linkedin": "..." }
     skills = Column(Text, nullable=True) # Comma separated or JSON
+    access_overrides = Column(Text, nullable=True) # JSON: per-user page/feature allow/deny overrides
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

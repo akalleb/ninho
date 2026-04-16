@@ -33,6 +33,22 @@ os.makedirs(COVERS_DIR, exist_ok=True)
 
 class ProfessionalService:
     @staticmethod
+    def normalize_access_overrides(access_overrides: Optional[dict]) -> dict:
+        if not isinstance(access_overrides, dict):
+            return {
+                "allow_pages": [],
+                "deny_pages": [],
+                "allow_features": [],
+                "deny_features": [],
+            }
+        return {
+            "allow_pages": [str(x) for x in access_overrides.get("allow_pages", []) if x],
+            "deny_pages": [str(x) for x in access_overrides.get("deny_pages", []) if x],
+            "allow_features": [str(x) for x in access_overrides.get("allow_features", []) if x],
+            "deny_features": [str(x) for x in access_overrides.get("deny_features", []) if x],
+        }
+
+    @staticmethod
     def create_supabase_user(email: str, password: str, metadata: dict):
         try:
             if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
@@ -216,8 +232,22 @@ class ProfessionalService:
     def create(cls, db: Session, professional: schemas.ProfessionalCreate) -> models.Professional:
         email_normalized = professional.email.strip().lower()
         password_plain = (professional.password or "").strip()
-        if len(password_plain) < 6:
-            raise HTTPException(status_code=400, detail="Senha inválida (mínimo 6 caracteres).")
+        
+        # Fortalecer validação de senha: mínimo 8 chars + complexidade
+        if len(password_plain) < 8:
+            raise HTTPException(status_code=400, detail="Senha deve ter no mínimo 8 caracteres.")
+        
+        # Verificar complexidade
+        has_upper = any(c.isupper() for c in password_plain)
+        has_lower = any(c.islower() for c in password_plain)
+        has_digit = any(c.isdigit() for c in password_plain)
+        has_special = any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in password_plain)
+        
+        if not (has_upper and has_lower and has_digit):
+            raise HTTPException(
+                status_code=400, 
+                detail="Senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número."
+            )
 
         existing_email = db.query(models.Professional).filter(models.Professional.email == email_normalized).first()
         if existing_email:
@@ -263,6 +293,9 @@ class ProfessionalService:
             status=professional.status or "active",
             avatar_url=professional.avatar_url,
             password_hash=password_hash,
+            access_overrides=json.dumps(cls.normalize_access_overrides(professional.access_overrides))
+            if professional.access_overrides
+            else None,
         )
         metadata = {
             "name": professional.name,
@@ -361,6 +394,10 @@ class ProfessionalService:
         db_professional.website = professional.website
         db_professional.social_media = professional.social_media
         db_professional.skills = professional.skills
+        if professional.access_overrides is not None:
+            db_professional.access_overrides = json.dumps(
+                cls.normalize_access_overrides(professional.access_overrides)
+            )
 
         if professional.password:
             password_plain = (professional.password or "").strip()
@@ -381,6 +418,39 @@ class ProfessionalService:
         db.commit()
         db.refresh(db_professional)
         return db_professional
+
+    @classmethod
+    def get_access_overrides(cls, db: Session, professional_id: int) -> dict:
+        professional = (
+            db.query(models.Professional)
+            .filter(models.Professional.id == professional_id)
+            .first()
+        )
+        if professional is None:
+            raise HTTPException(status_code=404, detail="Professional not found")
+
+        parsed = None
+        if professional.access_overrides:
+            try:
+                parsed = json.loads(professional.access_overrides)
+            except Exception:
+                parsed = None
+        return cls.normalize_access_overrides(parsed)
+
+    @classmethod
+    def update_access_overrides(cls, db: Session, professional_id: int, access_overrides: dict) -> dict:
+        professional = (
+            db.query(models.Professional)
+            .filter(models.Professional.id == professional_id)
+            .first()
+        )
+        if professional is None:
+            raise HTTPException(status_code=404, detail="Professional not found")
+
+        normalized = cls.normalize_access_overrides(access_overrides)
+        professional.access_overrides = json.dumps(normalized)
+        db.commit()
+        return normalized
 
     @classmethod
     def delete(cls, db: Session, professional_id: int) -> dict:

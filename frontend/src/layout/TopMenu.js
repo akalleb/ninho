@@ -272,7 +272,7 @@ function TopMenu() {
                     </NextNavLink>
                   </li>
                   <li>
-                    <NextNavLink onClick={addParentActive} to={`${path}/users/dataTable`}>
+                    <NextNavLink onClick={addParentActive} to={`${path}/collaborators`}>
                       User Table
                     </NextNavLink>
                   </li>

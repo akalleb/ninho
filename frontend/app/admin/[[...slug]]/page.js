@@ -95,7 +95,7 @@ function AdminCatchAll() {
   const slugArray = Array.isArray(slugParam) ? slugParam : [];
 
   if (slugArray[0] === 'users') {
-    const subSlug = slugArray[1] || 'dataTable';
+    const subSlug = slugArray[1] || 'collaborators';
 
     if (subSlug === 'add-user') {
       return <AddUser />;

@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Form, Input, Select, Button, Steps, DatePicker, InputNumber, Switch, Upload, message, App, Card, Divider } from 'antd';
+import { Row, Col, Form, Input, Select, Button, Steps, DatePicker, InputNumber, Switch, Upload, App, Card, Divider } from 'antd';
 import FeatherIcon from 'feather-icons-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageHeader } from '../../../components/page-headers/page-headers';
@@ -19,7 +19,7 @@ function AddFamily() {
   const searchParams = useSearchParams();
   const familyId = searchParams.get('id');
   const isEditMode = !!familyId;
-  const { notification } = App.useApp();
+  const { notification, message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [savedFamilyId, setSavedFamilyId] = useState(null); // To store ID after partial save
 
@@ -164,9 +164,31 @@ function AddFamily() {
   // Upload Props Generator
   const getUploadProps = (docType) => ({
       name: 'file',
-      action: `${api.defaults.baseURL}/families/${savedFamilyId || familyId}/docs?doc_type=${docType}`,
-      headers: {
-          // Add auth headers if needed
+      customRequest: async ({ file, onSuccess, onError, onProgress }) => {
+          try {
+              const id = savedFamilyId || familyId;
+              if (!id) {
+                  throw new Error('Salve a família antes de enviar documentos.');
+              }
+
+              const formData = new FormData();
+              formData.append('file', file);
+
+              const response = await api.post(`/families/${id}/docs?doc_type=${docType}`, formData, {
+                  headers: {
+                      'Content-Type': 'multipart/form-data',
+                  },
+                  onUploadProgress: (event) => {
+                      if (!onProgress || !event.total) return;
+                      const percent = Math.round((event.loaded / event.total) * 100);
+                      onProgress({ percent });
+                  },
+              });
+
+              if (onSuccess) onSuccess(response.data, file);
+          } catch (error) {
+              if (onError) onError(error);
+          }
       },
       onChange(info) {
           if (info.file.status === 'done') {

@@ -153,7 +153,16 @@ def get_performance_matrix(
         query = query.filter(func.date(models.Attendance.scheduled_time) <= end_date)
         
     result = query.first()
-    
+
+    # Handle case where query returns None (empty table)
+    if result is None:
+        return {
+            "scheduled": 0,
+            "finished": 0,
+            "no_show": 0,
+            "waiting": 0
+        }
+
     return {
         "scheduled": result[0] or 0,
         "finished": result[1] or 0,

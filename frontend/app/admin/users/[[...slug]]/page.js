@@ -41,7 +41,7 @@ function UsersRoutesPage() {
 
   if (firstSlug === 'add-user') {
     Component = AddUser;
-  } else if (firstSlug === 'dataTable') {
+  } else if (firstSlug === 'dataTable' || firstSlug === 'collaborators') {
     Component = DataTable;
   } else if (firstSlug === 'team') {
     Component = Team;

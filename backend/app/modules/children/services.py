@@ -11,6 +11,19 @@ from .schemas import ChildCreate, ChildMedicationCreate, ChildMedicationUpdate, 
 
 class ChildService:
     @staticmethod
+    def _doc_field_name(doc_type: str) -> str:
+        field_map = {
+            "report": "report_url",
+            "child_id": "child_id_url",
+            "vaccination": "vaccination_card_url",
+            "school": "school_history_url",
+        }
+        field_name = field_map.get(doc_type)
+        if not field_name:
+            raise HTTPException(status_code=400, detail="Tipo de documento inválido")
+        return field_name
+
+    @staticmethod
     def create(db: Session, child: ChildCreate) -> Child:
         child_data = child.model_dump()
         child_data["emergency_contact"] = encrypt_data(child.emergency_contact) if child.emergency_contact else None
@@ -87,17 +100,34 @@ class ChildService:
 
         public_url = f"/media/children/{filename}"
 
-        if doc_type == "report":
-            child.report_url = public_url
-        elif doc_type == "child_id":
-            child.child_id_url = public_url
-        elif doc_type == "vaccination":
-            child.vaccination_card_url = public_url
-        elif doc_type == "school":
-            child.school_history_url = public_url
+        field_name = ChildService._doc_field_name(doc_type)
+        setattr(child, field_name, public_url)
 
         db.commit()
         return {"url": public_url, "type": doc_type}
+
+    @staticmethod
+    def delete_doc(db: Session, child_id: int, doc_type: str):
+        child = ChildService.get_by_id(db, child_id)
+        field_name = ChildService._doc_field_name(doc_type)
+        current_url = getattr(child, field_name, None)
+        if not current_url:
+            raise HTTPException(status_code=404, detail="Documento não encontrado")
+
+        # Delete only files inside /media to avoid path traversal.
+        if isinstance(current_url, str) and current_url.startswith("/media/"):
+            relative_path = current_url[len("/media/") :]
+            file_path = os.path.abspath(os.path.join(MEDIA_ROOT, relative_path))
+            media_root_abs = os.path.abspath(MEDIA_ROOT)
+            if file_path.startswith(media_root_abs) and os.path.isfile(file_path):
+                try:
+                    os.remove(file_path)
+                except OSError:
+                    pass
+
+        setattr(child, field_name, None)
+        db.commit()
+        return {"ok": True, "type": doc_type}
 
     # Medications
     @staticmethod

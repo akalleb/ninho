@@ -110,6 +110,23 @@ def read_professional(
         raise HTTPException(status_code=404, detail="Professional not found")
     return professional
 
+@router.get("/{professional_id}/access-overrides")
+def read_professional_access_overrides(
+    professional_id: int,
+    current_user: models.Professional = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    return ProfessionalService.get_access_overrides(db, professional_id)
+
+@router.put("/{professional_id}/access-overrides")
+def update_professional_access_overrides(
+    professional_id: int,
+    payload: schemas.ProfessionalAccessOverridesUpdate,
+    current_user: models.Professional = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    return ProfessionalService.update_access_overrides(db, professional_id, payload.access_overrides)
+
 @router.delete("/{professional_id}")
 def delete_professional(
     professional_id: int,

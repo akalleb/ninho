@@ -41,7 +41,14 @@ async function proxy(req, { params }) {
   let body;
   if (method !== 'GET' && method !== 'HEAD') {
     try {
-      body = await req.text();
+      const contentType = req.headers.get('content-type') || '';
+      const isBinaryPayload =
+        contentType.includes('multipart/form-data') ||
+        contentType.includes('application/octet-stream');
+
+      // Keep binary bodies as bytes; use text for JSON/form payloads to avoid
+      // undici redirect issues with detached ArrayBuffer on 307 follow.
+      body = isBinaryPayload ? await req.arrayBuffer() : await req.text();
     } catch (e) {
       body = undefined;
     }
@@ -57,7 +64,8 @@ async function proxy(req, { params }) {
       cache: 'no-store',
     });
 
-    const isNoContent = response.status === 204 || response.status === 205;
+    // 304 responses must not include a body, same as 204/205.
+    const isNoContent = response.status === 204 || response.status === 205 || response.status === 304;
     const data = isNoContent ? null : await response.arrayBuffer();
 
     return new NextResponse(data, {

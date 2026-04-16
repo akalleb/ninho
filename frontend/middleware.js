@@ -2,7 +2,11 @@ import { NextResponse } from 'next/server';
 
 export function middleware(req) {
   const { pathname, search } = req.nextUrl;
+  
+  // Verificar ambos os cookies: access_token (AuthCallback) e logedIn (login normal)
   const token = req.cookies.get('access_token')?.value;
+  const loggedInCookie = req.cookies.get('logedIn')?.value;
+  const isAuthenticated = token || loggedInCookie;
 
   const isStaticOrDevAsset =
     pathname.startsWith('/_next') ||
@@ -14,7 +18,7 @@ export function middleware(req) {
     return NextResponse.next();
   }
 
-  if (!token && !pathname.startsWith('/auth')) {
+  if (!isAuthenticated && !pathname.startsWith('/auth')) {
     const url = req.nextUrl.clone();
     url.pathname = '/auth';
     url.searchParams.set('callbackUrl', pathname + search);

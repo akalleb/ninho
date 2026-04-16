@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import List, Optional
 import json
 
@@ -218,7 +218,7 @@ def create_attendance(
             raise HTTPException(status_code=403, detail="Acesso não autorizado")
 
     status = "agendado" if attendance.scheduled_time else "em_espera"
-    check_in = func.now() if status == "em_espera" else None
+    check_in = datetime.now(timezone.utc) if status == "em_espera" else None
 
     db_attendance = models.Attendance(
         child_id=attendance.child_id,
@@ -342,8 +342,8 @@ def update_attendance_status(
 ):
     attendance = db.query(models.Attendance).filter(models.Attendance.id == attendance_id).first()
     if not attendance:
-        raise HTTPException(status_code=404, detail="Attendance not found")
-    if current_user.role == "health" and attendance.professional_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Atendimento não encontrado")
+    if current_user and current_user.role == "health" and attendance.professional_id != current_user.id:
         raise HTTPException(status_code=403, detail="Acesso não autorizado")
 
     new_status = status_update.status
@@ -352,11 +352,11 @@ def update_attendance_status(
         attendance.notes = status_update.notes
 
     if new_status == "em_espera" and not attendance.check_in_time:
-        attendance.check_in_time = func.now()
+        attendance.check_in_time = datetime.now(timezone.utc)
     elif new_status == "em_atendimento":
-        attendance.start_time = func.now()
+        attendance.start_time = datetime.now(timezone.utc)
     elif new_status == "finalizado":
-        attendance.end_time = func.now()
+        attendance.end_time = datetime.now(timezone.utc)
         apply_auto_charge_for_attendance(db, attendance)
 
     db.commit()
@@ -397,7 +397,7 @@ def start_attendance(
 
     attendance.status = "em_atendimento"
     attendance.professional_id = professional_id
-    attendance.start_time = func.now()
+    attendance.start_time = datetime.now(timezone.utc)
     db.commit()
     db.refresh(attendance)
     return attendance
@@ -412,7 +412,7 @@ def finish_attendance(
 ):
     attendance = db.query(models.Attendance).filter(models.Attendance.id == attendance_id).first()
     if not attendance:
-        raise HTTPException(status_code=404, detail="Attendance not found")
+        raise HTTPException(status_code=404, detail="Atendimento não encontrado")
     if current_user.role == "health" and attendance.professional_id != current_user.id:
         raise HTTPException(status_code=403, detail="Acesso não autorizado")
 
@@ -420,7 +420,7 @@ def finish_attendance(
         raise HTTPException(status_code=400, detail="Apenas atendimentos 'Em Atendimento' podem ser finalizados.")
 
     attendance.status = "finalizado"
-    attendance.end_time = func.now()
+    attendance.end_time = datetime.now(timezone.utc)
     attendance.notes = notes
     apply_auto_charge_for_attendance(db, attendance)
     db.commit()
@@ -479,8 +479,9 @@ def patch_attendance_status(
     attendance_id: int,
     status_update: AttendanceUpdateStatus,
     db: Session = Depends(database.get_db),
+    current_user: models.Professional = Depends(get_current_user),
 ):
-    return update_attendance_status(attendance_id, status_update, db)
+    return update_attendance_status(attendance_id, status_update, db, current_user)
 
 
 @router.post("/attendances/{attendance_id}/evolution", response_model=Evolution)

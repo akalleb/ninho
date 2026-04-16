@@ -98,6 +98,7 @@ function Account() {
         email: updated.email,
         role: updated.role,
         status: updated.status || 'active',
+        access_overrides: updated.access_overrides || null,
       };
       await dispatch(login(authUser));
 
@@ -182,7 +183,7 @@ function Account() {
                             </Heading>
                             <p>
                               Para ativar ou desativar sua conta, utilize a coluna <strong>Status</strong> na
-                              Lista de Colaboradores (/admin/users/dataTable).
+                              Lista de Colaboradores (/admin/collaborators).
                             </p>
                           </Col>
                         </Row>
